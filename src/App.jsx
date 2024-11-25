@@ -30,10 +30,18 @@ const ProviderLocationMap = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/provider_data.csv');
-        const text = await response.text();
-        const parsedData = await parseCSVData(text);
-        const enrichedData = await enrichWithCoordinates(parsedData);
+        const csvFiles = [
+          '/provider_data.csv',
+          '/jail_data.csv',
+          '/hospital_data.csv',
+        ];
+        const parsedData = await Promise.all(csvFiles.map(async (file) => {
+          const response = await fetch(file);
+          const text = await response.text();
+          return await parseCSVData(text);
+        }));
+        // const enrichedData = await enrichWithCoordinates(flattenData(parsedData));
+        const enrichedData = flattenData(parsedData);
         setProviderData(enrichedData);
         initMap(enrichedData);
       } catch (error) {
@@ -61,45 +69,68 @@ const ProviderLocationMap = () => {
     });
   };
 
+  const flattenData = (parsedData) => {
+    return parsedData.reduce((acc, curr) => {
+      return acc.concat(curr.map(item => ({
+        'Provider Last Name': item['Provider Last Name'] || item['Facility_Name'] || item['Name'],
+        'Provider First Name': item['Provider First Name'] || item['First Name'],
+        NPI: item.NPI,
+        'pri_spec': item.pri_spec || item['Facility_Type'] || 'Jail',
+        gndr: item.gndr,
+        address: item['Address_Full'] ? item['Address_Full'] : `${item['adr_ln_1'] || item['Address']}, ${item['City/Town'] || item.City}, 'CO' ${item['ZIP Code'] || item['Zip Code']}`,
+        longitude: item.longitude,
+        latitude: item.latitude
+      })));
+    }, []);
+  };
+
   const enrichWithCoordinates = async (data) => {
     let hasEnrichedData = false;
     const enrichedData = await Promise.all(
       data.map(async (item) => {
-        console.log(1, item.latitude === undefined)
         if (item.latitude === null || item.longitude === null) {
-          console.log(2)
           hasEnrichedData = true;
-          const address = `${item['adr_ln_1']}, ${item['City/Town']}, ${item['State']} ${item['ZIP Code']}`;
-          const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxgl.accessToken}`
-          );
-          const geocodingData = await response.json();
-          console.log(geocodingData)
-          if (geocodingData.features.length > 0) {
-            const [longitude, latitude] = geocodingData.features[0].center;
-            return { ...item, longitude, latitude };
-          } else {
-            console.error(`Unable to geocode address for item: ${item['Provider Last Name']}, ${item['Provider First Name']}`);
-            return { ...item, longitude: null, latitude: null };
+          const address = item.address;
+          try {
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxgl.accessToken}`
+            );
+            const geocodingData = await response.json();
+            if (geocodingData.features.length > 0) {
+              const [longitude, latitude] = geocodingData.features[0].center;
+              return { ...item, longitude, latitude };
+            } else {
+              console.error(`Unable to geocode address for item: ${item['Provider Last Name']}, ${item['Provider First Name']}`);
+              return { ...item, longitude: null, latitude: null };
+            }
+          } catch (error) {
+            console.log(geocodingData)
+            if (error.message.includes('429')) {
+              console.error('Mapbox Geocoding API rate limit reached. Proceeding without geocoding.');
+              return { ...item, longitude: null, latitude: null };
+            } else {
+              console.error(`Error geocoding address for item: ${item['Provider Last Name']}, ${item['Provider First Name']}, ${error}`);
+              return { ...item, longitude: null, latitude: null };
+            }
           }
         }
         return item;
       })
     );
-  
-    if (hasEnrichedData) {
-      // Create a downloadable CSV file with the enriched data
-      const enrichedCsv = Papa.unparse(enrichedData, { header: true });
-      const blob = new Blob([enrichedCsv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'provider_data.csv');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  
+
+    // if (hasEnrichedData) {
+    //   // Create a downloadable CSV file with the enriched data
+    //   const enrichedCsv = Papa.unparse(enrichedData, { header: true });
+    //   const blob = new Blob([enrichedCsv], { type: 'text/csv' });
+    //   const url = window.URL.createObjectURL(blob);
+    //   const link = document.createElement('a');
+    //   link.setAttribute('href', url);
+    //   link.setAttribute('download', 'provider_data.csv');
+    //   document.body.appendChild(link);
+    //   link.click();
+    //   document.body.removeChild(link);
+    // }
+
     return enrichedData;
   };
 
@@ -111,23 +142,22 @@ const ProviderLocationMap = () => {
       zoom: 6
     });
 
-
     data.forEach((provider) => {
       if (provider.longitude !== null && provider.latitude !== null) {
-                // Create a DOM element for each marker.
-                const el = document.createElement('div');
-                el.className = 'marker';
-                if(provider.pri_spec === 'Jail' ){
-                  el.style.backgroundColor = 'green';
-                } else if (provider.pri_spec === 'Hospital' ){
-                    el.style.backgroundColor = 'red';
-                } else {
-                    el.style.backgroundColor = 'yellow';
-                }
-                el.style.width = `10px`;
-                el.style.height = `10px`;
-                el.style.backgroundSize = '100%';
-        
+        // Create a DOM element for each marker.
+        const el = document.createElement('div');
+        el.className = 'marker';
+        if (provider.pri_spec === 'Jail') {
+          el.style.backgroundColor = 'green';
+        } else if (provider.pri_spec === 'Hospital' || provider.pri_spec === 'Community Clinic') {
+          el.style.backgroundColor = 'red';
+        } else {
+          el.style.backgroundColor = 'yellow';
+        }
+        el.style.width = `10px`;
+        el.style.height = `10px`;
+        el.style.backgroundSize = '100%';
+
         new mapboxgl.Marker(el)
           .setLngLat([provider.longitude, provider.latitude])
           .addClassName('.green')
@@ -145,7 +175,7 @@ const ProviderLocationMap = () => {
       }
     });
   };
-  console.log(1)
+
   return (
     <Card>
       <CardHeader>
