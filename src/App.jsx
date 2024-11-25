@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import mapboxgl from './mapbox';
 import Papa from 'papaparse';
-import fs from 'fs';
-import path from 'path';
 
 const Card = ({ children }) => (
   <div className="bg-white shadow-md rounded-md p-4">
@@ -32,11 +30,10 @@ const ProviderLocationMap = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/example data.csv');
+        const response = await fetch('/provider_data.csv');
         const text = await response.text();
         const parsedData = await parseCSVData(text);
         const enrichedData = await enrichWithCoordinates(parsedData);
-        console.log(1, enrichedData)
         setProviderData(enrichedData);
         initMap();
       } catch (error) {
@@ -64,12 +61,13 @@ const ProviderLocationMap = () => {
     });
   };
 
-  const enrichWithCoordinates = async (data, csvFilePath) => {
+  const enrichWithCoordinates = async (data) => {
+    let hasEnrichedData = false;
     const enrichedData = await Promise.all(
       data.map(async (item) => {
         if (item.latitude === undefined || item.longitude === undefined) {
+          hasEnrichedData = true;
           const address = `${item['adr_ln_1']}, ${item['City/Town']}, ${item['State']} ${item['ZIP Code']}`;
-          console.log(address)
           const response = await fetch(
             `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxgl.accessToken}`
           );
@@ -86,9 +84,18 @@ const ProviderLocationMap = () => {
       })
     );
   
-    // Write the enriched data back to the CSV file
-    const enrichedCsv = Papa.unparse(enrichedData, { header: true });
-    // fs.writeFileSync(csvFilePath, enrichedCsv);
+    if (hasEnrichedData) {
+      // Create a downloadable CSV file with the enriched data
+      const enrichedCsv = Papa.unparse(enrichedData, { header: true });
+      const blob = new Blob([enrichedCsv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'provider_data.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   
     return enrichedData;
   };
@@ -101,8 +108,10 @@ const ProviderLocationMap = () => {
       zoom: 6
     });
 
+
     providerData.forEach((provider) => {
       if (provider.longitude !== null && provider.latitude !== null) {
+        
         new mapboxgl.Marker()
           .setLngLat([provider.longitude, provider.latitude])
           .setPopup(
@@ -116,6 +125,7 @@ const ProviderLocationMap = () => {
             )
           )
           .addTo(map.current);
+
       }
     });
   };
