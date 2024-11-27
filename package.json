@@ -12,6 +12,9 @@
     "deploy": "npm run build && gh-pages -d build"
   },
   "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
+    "@mui/material": "^6.1.8",
     "@shadcn/ui": "^0.0.4",
     "mapbox-gl": "^3.8.0",
     "papaparse": "^5.4.1",
