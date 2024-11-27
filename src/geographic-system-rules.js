@@ -178,6 +178,26 @@ export const config = {
       }
     },
     {
+      "serviceType": "Hospital",
+      "distances": {
+        "Large Metro": 15,
+        "Metro": 45,
+        "Micro": 75,
+        "Rural": 75,
+        "CEACs": 140
+      }
+    },
+    {
+      "serviceType": "HOSPITAL",
+      "distances": {
+        "Large Metro": 15,
+        "Metro": 45,
+        "Micro": 75,
+        "Rural": 75,
+        "CEACs": 140
+      }
+    },
+    {
       "serviceType": "Outpatient competency restoration",
       "distances": {
         "Large Metro": "n/a",

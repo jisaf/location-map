@@ -28,9 +28,109 @@ const ProviderLocationMapWithLegend = () => {
   const markers = useRef({});
   const serviceCircles = useRef({});
 
+  // Define parseCSVData before it's used
+  const parseCSVData = (csvContent) => {
+    return new Promise((resolve, reject) => {
+      Papa.parse(csvContent, {
+        download: false,
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          console.log('Sample row:', results.data[0]);
+          console.log('Available columns:', Object.keys(results.data[0]));
+          resolve(results.data);
+        },
+        error: (error) => reject(error)
+      });
+    });
+  };
+
+  const findCountyFromCoordinates = (longitude, latitude, countyBoundaries) => {
+    if (!countyBoundaries || !countyBoundaries.features) return null;
+
+    // Function to check if a point is inside a polygon
+    const pointInPolygon = (point, polygon) => {
+      // Handle MultiPolygon
+      if (polygon.type === 'MultiPolygon') {
+        return polygon.coordinates.some(coords => 
+          pointInSinglePolygon(point, coords[0])
+        );
+      }
+      // Handle single Polygon
+      return pointInSinglePolygon(point, polygon.coordinates[0]);
+    };
+
+    // Ray casting algorithm for point in polygon
+    const pointInSinglePolygon = (point, polygon) => {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i][0], yi = polygon[i][1];
+        const xj = polygon[j][0], yj = polygon[j][1];
+        
+        const intersect = ((yi > point[1]) !== (yj > point[1])) &&
+          (point[0] < (xj - xi) * (point[1] - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+
+    const point = [longitude, latitude];
+    
+    // Find the county that contains this point
+    const county = countyBoundaries.features.find(feature => {
+      const geometry = feature.geometry;
+      return pointInPolygon(point, geometry);
+    });
+
+    return county ? county.properties.COUNTY : null;
+  };
+
+  const flattenData = (parsedData) => {
+    return parsedData.reduce((acc, curr) => {
+      return acc.concat(curr.map(item => {
+        // Handle different types of records (hospitals vs providers)
+        const isHospital = item.Facility_Name && item.Facility_Type;
+        const longitude = Number(item.longitude || item.X);
+        const latitude = Number(item.latitude || item.Y);
+        
+        // Get county from data or find it from coordinates
+        let county = item.County || item.county || '';
+        if (!county && longitude && latitude && countyBoundaries) {
+          county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
+          console.log(`Found county from coordinates for ${isHospital ? item.Facility_Name : item['Provider Last Name']}: ${county}`);
+        }
+        
+        return {
+          'Provider Last Name': isHospital ? item.Facility_Name : (item['Provider Last Name'] || item['Name'] || ''),
+          'Provider First Name': isHospital ? '' : (item['Provider First Name'] || item['First Name'] || ''),
+          NPI: item.NPI,
+          'pri_spec': item.Facility_Type || item.pri_spec || 'Jail',
+          gndr: item.gndr,
+          address: item.Address_Full || `${item['adr_ln_1'] || item['Address'] || ''}, ${item['City/Town'] || item.City || ''}, CO ${item['ZIP Code'] || item['Zip Code'] || ''}`,
+          longitude,
+          latitude,
+          county,
+          facilityType: item.Facility_Type || item.Facility_Type_Detail || ''
+        };
+      }));
+    }, []);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch county boundaries first
+        const geoJsonResponse = await fetch('/Colorado_County_Boundaries.geojson', {
+          cache: 'no-store'
+        });
+        if (!geoJsonResponse.ok) {
+          throw new Error(`HTTP error! status: ${geoJsonResponse.status}`);
+        }
+        const geoJsonData = await geoJsonResponse.json();
+        setCountyBoundaries(geoJsonData);
+
+        // Then fetch and process provider data
         const csvFiles = [
           '/provider_data.csv',
           '/jail_data.csv',
@@ -41,20 +141,20 @@ const ProviderLocationMapWithLegend = () => {
           const text = await response.text();
           return await parseCSVData(text);
         }));
+        
         const enrichedData = flattenData(parsedData);
+        
+        // Debug log to verify county data
+        console.log('Sample of processed data:', 
+          enrichedData.slice(0, 3).map(item => ({
+            name: item['Provider Last Name'],
+            county: item.county,
+            pri_spec: item.pri_spec,
+            location: [item.longitude, item.latitude]
+          }))
+        );
+        
         setProviderData(enrichedData);
-
-        if (!countyBoundaries) {
-          const geoJsonResponse = await fetch('/Colorado_County_Boundaries.geojson', {
-            cache: 'no-store'
-          });
-          if (!geoJsonResponse.ok) {
-            throw new Error(`HTTP error! status: ${geoJsonResponse.status}`);
-          }
-          const geoJsonData = await geoJsonResponse.json();
-          setCountyBoundaries(geoJsonData);
-        }
-
         initMap();
         initLegend(enrichedData);
       } catch (error) {
@@ -72,37 +172,6 @@ const ProviderLocationMapWithLegend = () => {
       addServiceAreaCircles(providerData);
     }
   }, [mapLoaded, countyBoundaries, providerData]);
-
-  const parseCSVData = (csvContent) => {
-    return new Promise((resolve, reject) => {
-      Papa.parse(csvContent, {
-        download: false,
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        complete: (results) => resolve(results.data),
-        error: (error) => reject(error)
-      });
-    });
-  };
-
-  const flattenData = (parsedData) => {
-    return parsedData.reduce((acc, curr) => {
-      return acc.concat(curr.map(item => ({
-        'Provider Last Name': item['Provider Last Name'] || item['Facility_Name'] || item['Name'] || '',
-        'Provider First Name': item['Provider First Name'] || item['First Name'] || '',
-        NPI: item.NPI,
-        'pri_spec': item.pri_spec || item['Facility_Type'] || 'Jail',
-        'serviceTypes': item.serviceTypes || [],
-        gndr: item.gndr,
-        address: item['Address_Full'] ? item['Address_Full'] : 
-          `${item['adr_ln_1'] || item['Address'] || ''}, ${item['City/Town'] || item.City || ''}, CO ${item['ZIP Code'] || item['Zip Code'] || ''}`,
-        longitude: item.longitude,
-        latitude: item.latitude,
-        county: item.county
-      })));
-    }, []);
-  };
 
   const initMap = () => {
     if (map.current) return;
@@ -128,7 +197,6 @@ const ProviderLocationMapWithLegend = () => {
     if (!map.current || !countyBoundaries) return;
 
     if (!map.current.getSource('counties')) {
-      // Create a lookup object for quick region access
       const regionLookup = config.counties.reduce((acc, county) => {
         if (county && county.name) {
           acc[county.name.toUpperCase()] = county.region;
@@ -136,7 +204,6 @@ const ProviderLocationMapWithLegend = () => {
         return acc;
       }, {});
 
-      // Add a new property to each feature in the GeoJSON
       const updatedGeoJSON = {
         ...countyBoundaries,
         features: countyBoundaries.features.map(feature => ({
@@ -224,7 +291,6 @@ const ProviderLocationMapWithLegend = () => {
   const addProviderMarkers = useCallback((providers) => {
     if (!map.current || !providers) return;
 
-    // Clear existing markers
     Object.values(markers.current).forEach(markerArray => {
       markerArray.forEach(marker => marker.remove());
     });
@@ -235,10 +301,10 @@ const ProviderLocationMapWithLegend = () => {
         const el = document.createElement('div');
         el.className = 'marker';
         el.style.backgroundColor = provider.pri_spec === 'Jail' 
-          ? '#22c55e'  // green-500
+          ? '#22c55e'
           : provider.pri_spec === 'Hospital' || provider.pri_spec === 'Community Clinic'
-            ? '#ef4444'  // red-500
-            : '#eab308';  // yellow-500
+            ? '#ef4444'
+            : '#eab308';
         el.style.width = '8px';
         el.style.height = '8px';
         el.style.borderRadius = '50%';
@@ -270,72 +336,64 @@ const ProviderLocationMapWithLegend = () => {
   const addServiceAreaCircles = useCallback((providers) => {
     if (!map.current || !providers) return;
 
-    // Clear existing circles
     Object.values(serviceCircles.current).forEach(circles => {
       circles.forEach(circle => circle.remove());
     });
     serviceCircles.current = {};
 
     providers.forEach(provider => {
-      if (provider.serviceTypes?.length && provider.longitude && provider.latitude && provider.county) {
+      if (provider.longitude && provider.latitude && provider.county && provider.pri_spec) {
         const countyData = config.counties.find(c => 
           c?.name?.toUpperCase() === provider.county?.toUpperCase()
         );
         
         if (!countyData?.classification) return;
 
-        provider.serviceTypes.forEach(serviceType => {
-          const distance = config.distances?.[serviceType]?.[countyData.classification];
-          if (!distance) return;
+        const serviceType = provider.pri_spec;
+        const distance = config.distances?.[serviceType]?.[countyData.classification];
+        if (!distance) return;
 
-          // Convert miles to kilometers for Mapbox
-          const radiusInKm = distance * 1.60934;
+        const radiusInKm = distance * 1.60934;
 
-          const circle = new mapboxgl.Circle({
-            lat: provider.latitude,
-            lng: provider.longitude,
-            radius: radiusInKm * 1000, // Convert to meters
-            properties: {
-              serviceType: serviceType
-            },
-            paint: {
-              'circle-color': '#3B82F6',
-              'circle-opacity': 0.2,
-              'circle-stroke-width': 1,
-              'circle-stroke-color': '#2563EB'
-            }
-          });
-
-          if (!serviceCircles.current[serviceType]) {
-            serviceCircles.current[serviceType] = [];
-          }
-          
-          serviceCircles.current[serviceType].push(circle);
-          
-          if (activeServiceTypes[serviceType]) {
-            circle.addTo(map.current);
+        const circle = new mapboxgl.Circle({
+          lat: provider.latitude,
+          lng: provider.longitude,
+          radius: radiusInKm * 1000,
+          properties: {
+            serviceType: serviceType
+          },
+          paint: {
+            'circle-color': '#3B82F6',
+            'circle-opacity': 0.2,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#2563EB'
           }
         });
+
+        if (!serviceCircles.current[serviceType]) {
+          serviceCircles.current[serviceType] = [];
+        }
+        
+        serviceCircles.current[serviceType].push(circle);
+        
+        if (activeServiceTypes[serviceType]) {
+          circle.addTo(map.current);
+        }
       }
     });
   }, [activeServiceTypes]);
 
   const initLegend = (data) => {
-    // Initialize facility types
     const uniqueSpecialties = Array.from(new Set(data.map(item => item.pri_spec).filter(Boolean)));
+    
     setActiveSpecialties(
       uniqueSpecialties.reduce((acc, spec) => ({ ...acc, [spec]: true }), {})
     );
 
-    // Initialize service types (all off by default)
-    const uniqueServiceTypes = Array.from(
-      new Set(data.flatMap(item => item.serviceTypes || []).filter(Boolean))
-    );
     setActiveServiceTypes(
-      uniqueServiceTypes.reduce((acc, type) => ({ ...acc, [type]: false }), {})
+      uniqueSpecialties.reduce((acc, spec) => ({ ...acc, [spec]: false }), {})
     );
 
-    // Initialize regions
     const uniqueRegions = Array.from(
       new Set(config.counties.map(county => county?.region).filter(Boolean))
     );
@@ -348,7 +406,6 @@ const ProviderLocationMapWithLegend = () => {
     setActiveSpecialties(prev => {
       const newState = { ...prev, [specialty]: !prev[specialty] };
       
-      // Update markers visibility
       const specMarkers = markers.current[specialty] || [];
       specMarkers.forEach(marker => {
         if (newState[specialty]) {
@@ -366,7 +423,6 @@ const ProviderLocationMapWithLegend = () => {
     setActiveServiceTypes(prev => {
       const newState = { ...prev, [serviceType]: !prev[serviceType] };
       
-      // Update service area circles visibility
       const typeCircles = serviceCircles.current[serviceType] || [];
       typeCircles.forEach(circle => {
         if (newState[serviceType]) {
