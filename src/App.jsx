@@ -440,7 +440,7 @@ const ProviderLocationMapWithLegend = () => {
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          Provider Location Map
+          Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
         <Box sx={{ display: 'flex', height: '600px' }}>
           <Box
