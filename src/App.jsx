@@ -121,7 +121,7 @@ const ProviderLocationMapWithLegend = () => {
     const fetchData = async () => {
       try {
         // Fetch county boundaries first
-        const geoJsonResponse = await fetch('/Colorado_County_Boundaries.geojson', {
+        const geoJsonResponse = await fetch('./Colorado_County_Boundaries.geojson', {
           cache: 'no-store'
         });
         if (!geoJsonResponse.ok) {
