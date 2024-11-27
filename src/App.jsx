@@ -132,9 +132,9 @@ const ProviderLocationMapWithLegend = () => {
 
         // Then fetch and process provider data
         const csvFiles = [
-          '/provider_data.csv',
-          '/jail_data.csv',
-          '/hospital_data.csv',
+          './provider_data.csv',
+          './jail_data.csv',
+          './hospital_data.csv',
         ];
         const parsedData = await Promise.all(csvFiles.map(async (file) => {
           const response = await fetch(file);
