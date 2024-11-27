@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://jisaf.github.io/location-map",
+  "homepage": "https://jisaf.github.io/location-map/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
