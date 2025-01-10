@@ -3,6 +3,7 @@ import mapboxgl from './mapbox';
 import Papa from 'papaparse';
 import { config } from './geographic-system-rules';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { google } from 'googleapis';
 
 import { 
   Card, 
@@ -28,22 +29,40 @@ const ProviderLocationMapWithLegend = () => {
   const markers = useRef({});
   const serviceCircles = useRef({});
 
-  // Define parseCSVData before it's used
-  const parseCSVData = (csvContent) => {
-    return new Promise((resolve, reject) => {
-      Papa.parse(csvContent, {
-        download: false,
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          console.log('Sample row:', results.data[0]);
-          console.log('Available columns:', Object.keys(results.data[0]));
-          resolve(results.data);
-        },
-        error: (error) => reject(error)
+  // Google Sheets configuration
+  const SPREADSHEET_CONFIG = {
+    spreadsheetId: process.env.REACT_APP_SPREADSHEET_ID,
+    apiKey: process.env.REACT_APP_GOOGLE_API_KEY,
+    sheetName: process.env.REACT_APP_SHEET_NAME || 'data'
+  };
+
+  const fetchGoogleSheetsData = async (sheetName) => {
+    try {
+      const sheets = google.sheets({ version: 'v4', auth: SPREADSHEET_CONFIG.apiKey });
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_CONFIG.spreadsheetId,
+        range: sheetName,
       });
-    });
+
+      const rows = response.data.values;
+      if (!rows || rows.length === 0) {
+        throw new Error('No data found in the sheet.');
+      }
+
+      const headers = rows[0];
+      const data = rows.slice(1).map(row => {
+        const item = {};
+        headers.forEach((header, index) => {
+          item[header] = row[index];
+        });
+        return item;
+      });
+
+      return data;
+    } catch (error) {
+      console.error(`Error fetching data from sheet ${sheetName}:`, error);
+      throw error;
+    }
   };
 
   const findCountyFromCoordinates = (longitude, latitude, countyBoundaries) => {
@@ -86,35 +105,61 @@ const ProviderLocationMapWithLegend = () => {
     return county ? county.properties.COUNTY : null;
   };
 
-  const flattenData = (parsedData) => {
-    return parsedData.reduce((acc, curr) => {
-      return acc.concat(curr.map(item => {
-        // Handle different types of records (hospitals vs providers)
-        const isHospital = item.Facility_Name && item.Facility_Type;
-        const longitude = Number(item.longitude || item.X);
-        const latitude = Number(item.latitude || item.Y);
-        
-        // Get county from data or find it from coordinates
-        let county = item.County || item.county || '';
-        if (!county && longitude && latitude && countyBoundaries) {
-          county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
-          console.log(`Found county from coordinates for ${isHospital ? item.Facility_Name : item['Provider Last Name']}: ${county}`);
+  const getFacilityColor = (facilityType) => {
+    const colorMap = {
+      'Hospital': '#ef4444',
+      'Community Clinic': '#22c55e',
+      'Mental Health Center': '#3b82f6',
+      'Crisis Center': '#f59e0b',
+      'Substance Use Disorder': '#8b5cf6',
+      'Other': '#6b7280'
+    };
+    return colorMap[facilityType] || colorMap['Other'];
+  };
+
+  const getServicesString = (services) => {
+    const servicesList = [];
+    if (services.inpatient) servicesList.push('Inpatient');
+    if (services.outpatient) servicesList.push('Outpatient');
+    if (services.children) servicesList.push('Children');
+    if (services.adults) servicesList.push('Adults');
+    return servicesList.join(', ');
+  };
+
+  const flattenData = (data) => {
+    if (!Array.isArray(data)) {
+      console.error('Expected array of data but got:', typeof data);
+      return [];
+    }
+
+    return data.map(item => {
+      const longitude = Number(item['Longitude (optional)']);
+      const latitude = Number(item['Latitude (optional)']);
+      
+      // Get county from coordinates if available
+      let county = '';
+      if (longitude && latitude && countyBoundaries) {
+        county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
+        if (county) {
+          console.log(`Found county from coordinates for ${item['Facility Name']}: ${county}`);
         }
-        
-        return {
-          'Provider Last Name': isHospital ? item.Facility_Name : (item['Provider Last Name'] || item['Name'] || ''),
-          'Provider First Name': isHospital ? '' : (item['Provider First Name'] || item['First Name'] || ''),
-          NPI: item.NPI,
-          'pri_spec': item.Facility_Type || item.pri_spec || 'Jail',
-          gndr: item.gndr,
-          address: item.Address_Full || `${item['adr_ln_1'] || item['Address'] || ''}, ${item['City/Town'] || item.City || ''}, CO ${item['ZIP Code'] || item['Zip Code'] || ''}`,
-          longitude,
-          latitude,
-          county,
-          facilityType: item.Facility_Type || item.Facility_Type_Detail || ''
-        };
-      }));
-    }, []);
+      }
+      
+      return {
+        facilityName: item['Facility Name'],
+        facilityType: item['Facility Type'],
+        address: `${item['Street Address']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
+        longitude,
+        latitude,
+        county,
+        services: {
+          inpatient: item['Inpatient']?.toLowerCase() === 'true' || item['Inpatient'] === true,
+          outpatient: item['Outpatient']?.toLowerCase() === 'true' || item['Outpatient'] === true,
+          children: item['Children']?.toLowerCase() === 'true' || item['Children'] === true,
+          adults: item['Adults']?.toLowerCase() === 'true' || item['Adults'] === true
+        }
+      };
+    });
   };
 
   useEffect(() => {
@@ -130,19 +175,10 @@ const ProviderLocationMapWithLegend = () => {
         const geoJsonData = await geoJsonResponse.json();
         setCountyBoundaries(geoJsonData);
 
-        // Then fetch and process provider data
-        const csvFiles = [
-          './provider_data.csv',
-          './jail_data.csv',
-          './hospital_data.csv',
-        ];
-        const parsedData = await Promise.all(csvFiles.map(async (file) => {
-          const response = await fetch(file);
-          const text = await response.text();
-          return await parseCSVData(text);
-        }));
+        // Fetch provider data from Google Sheets
+        const sheetData = await fetchGoogleSheetsData(SPREADSHEET_CONFIG.sheetName);
         
-        const enrichedData = flattenData(parsedData);
+        const enrichedData = flattenData(sheetData);
         
         // Debug log to verify county data
         console.log('Sample of processed data:', 
@@ -158,11 +194,15 @@ const ProviderLocationMapWithLegend = () => {
         initMap();
         initLegend(enrichedData);
       } catch (error) {
-        console.error('Error reading file:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchData();
+    if (SPREADSHEET_CONFIG.spreadsheetId && SPREADSHEET_CONFIG.apiKey) {
+      fetchData();
+    } else {
+      console.error('Missing required Google Sheets configuration. Please set REACT_APP_SPREADSHEET_ID and REACT_APP_GOOGLE_API_KEY environment variables.');
+    }
   }, []);
 
   useEffect(() => {
@@ -288,45 +328,41 @@ const ProviderLocationMapWithLegend = () => {
     }
   };
 
-  const addProviderMarkers = useCallback((providers) => {
-    if (!map.current || !providers) return;
+  const addProviderMarkers = useCallback((facilities) => {
+    if (!map.current || !facilities) return;
 
     Object.values(markers.current).forEach(markerArray => {
       markerArray.forEach(marker => marker.remove());
     });
     markers.current = {};
 
-    providers.forEach((provider) => {
-      if (provider.longitude && provider.latitude) {
+    facilities.forEach((facility) => {
+      if (facility.longitude && facility.latitude) {
         const el = document.createElement('div');
         el.className = 'marker';
-        el.style.backgroundColor = provider.pri_spec === 'Jail' 
-          ? '#22c55e'
-          : provider.pri_spec === 'Hospital' || provider.pri_spec === 'Community Clinic'
-            ? '#ef4444'
-            : '#eab308';
+        el.style.backgroundColor = getFacilityColor(facility.facilityType);
         el.style.width = '8px';
         el.style.height = '8px';
         el.style.borderRadius = '50%';
 
         const marker = new mapboxgl.Marker(el)
-          .setLngLat([provider.longitude, provider.latitude])
+          .setLngLat([facility.longitude, facility.latitude])
           .setPopup(
             new mapboxgl.Popup({ offset: 25 }).setHTML(`
-              <h3>${provider['Provider Last Name']}, ${provider['Provider First Name']}</h3>
-              <p>NPI: ${provider.NPI || 'N/A'}</p>
-              <p>Primary Specialty: ${provider.pri_spec || 'N/A'}</p>
-              <p>Gender: ${provider.gndr || 'N/A'}</p>
+              <h3>${facility.facilityName}</h3>
+              <p><strong>Type:</strong> ${facility.facilityType}</p>
+              <p><strong>Address:</strong> ${facility.address}</p>
+              <p><strong>Services:</strong> ${getServicesString(facility.services)}</p>
             `)
           );
 
-        if (!markers.current[provider.pri_spec]) {
-          markers.current[provider.pri_spec] = [];
+        if (!markers.current[facility.facilityType]) {
+          markers.current[facility.facilityType] = [];
         }
         
-        markers.current[provider.pri_spec].push(marker);
+        markers.current[facility.facilityType].push(marker);
 
-        if (activeSpecialties[provider.pri_spec]) {
+        if (activeSpecialties[facility.facilityType]) {
           marker.addTo(map.current);
         }
       }
@@ -384,14 +420,16 @@ const ProviderLocationMapWithLegend = () => {
   }, [activeServiceTypes]);
 
   const initLegend = (data) => {
-    const uniqueSpecialties = Array.from(new Set(data.map(item => item.pri_spec).filter(Boolean)));
+    const uniqueFacilityTypes = Array.from(new Set(data.map(item => item.facilityType).filter(Boolean)));
     
     setActiveSpecialties(
-      uniqueSpecialties.reduce((acc, spec) => ({ ...acc, [spec]: true }), {})
+      uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {})
     );
 
+    // Initialize service types based on available services
+    const serviceTypes = ['Inpatient', 'Outpatient', 'Children', 'Adults'];
     setActiveServiceTypes(
-      uniqueSpecialties.reduce((acc, spec) => ({ ...acc, [spec]: false }), {})
+      serviceTypes.reduce((acc, service) => ({ ...acc, [service]: false }), {})
     );
 
     const uniqueRegions = Array.from(
@@ -484,11 +522,7 @@ const ProviderLocationMapWithLegend = () => {
                                 height: 8,
                                 borderRadius: '50%',
                                 mr: 1,
-                                bgcolor: specialty === 'Jail' 
-                                  ? 'success.main'
-                                  : specialty === 'Hospital' || specialty === 'Community Clinic'
-                                    ? 'error.main'
-                                    : 'warning.main'
+                                bgcolor: getFacilityColor(specialty)
                               }}
                             />
                             <Typography variant="body2">{specialty}</Typography>
