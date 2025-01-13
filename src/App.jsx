@@ -45,12 +45,9 @@ const ProviderLocationMapWithLegend = () => {
       if (!jsonText) {
         throw new Error('Invalid response format');
       }
-      console.log(jsonText)
       const jsonData = JSON.parse(jsonText);
-      console.log('Parsed JSON data:', jsonData);
       const table = jsonData.table;
       const headers = table.cols.map(col => col.label.trim());
-      console.log('Headers:', headers);
       
       const data = table.rows
         .map(row => {
@@ -68,7 +65,6 @@ const ProviderLocationMapWithLegend = () => {
         })
         .filter(item => item.FacilityName !== null); // Drop rows with null Facility Name
       
-      console.log('Processed data:', data);
       return data;
     } catch (error) {
       console.error('Error fetching data from Google Sheets:', error);
@@ -145,21 +141,14 @@ const ProviderLocationMapWithLegend = () => {
     }
 
     return data.map(item => {
-      console.log(item)
-      // Coordinates should already be numbers from fetchData
       const longitude = item['Longitude(optional)'];
       const latitude = item['Latitude(optional)'];
-      console.log('Using coordinates:', { longitude, latitude });
       
       // Get county from coordinates if available
       let county = '';
       if (longitude && latitude && countyBoundaries) {
         county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
-        if (county) {
-          console.log(`Found county from coordinates for ${item['FacilityName']}: ${county}`);
-        }
       }
-      console.log('Processing item:', item);
       return {
         facilityName: item['FacilityName'],
         facilityType: item['FacilityType'],
@@ -190,9 +179,7 @@ const ProviderLocationMapWithLegend = () => {
 
         // Get provider data
         const data = await fetchData();
-        console.log('Raw data from fetchData:', data);
         const enrichedData = flattenData(data);
-        console.log('Enriched data:', enrichedData);
         
         setProviderData(enrichedData);
         initMap();
@@ -214,11 +201,9 @@ const ProviderLocationMapWithLegend = () => {
   }, [mapLoaded, countyBoundaries, providerData]);
 
   const initMap = () => {
-    console.log('Initializing map, current map ref:', map.current);
     if (map.current) return;
 
     try {
-      console.log('Creating new map instance');
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v10',
@@ -227,7 +212,6 @@ const ProviderLocationMapWithLegend = () => {
       });
 
       map.current.on('load', () => {
-        console.log('Map loaded successfully');
         setMapLoaded(true);
       });
     } catch (error) {
@@ -331,20 +315,14 @@ const ProviderLocationMapWithLegend = () => {
   };
 
   const addProviderMarkers = useCallback((facilities) => {
-    console.log('Adding provider markers with facilities:', facilities);
-    console.log('Map reference:', map.current);
     if (!map.current || !facilities) return;
-
-    console.log('Clearing existing markers');
     Object.values(markers.current).forEach(markerArray => {
       markerArray.forEach(marker => marker.remove());
     });
     markers.current = {};
 
     facilities.forEach((facility) => {
-      console.log('Processing facility for marker:', facility);
       if (facility.longitude && facility.latitude) {
-        console.log('Creating marker for facility:', facility.facilityName);
         const el = document.createElement('div');
         el.className = 'marker';
         el.style.backgroundColor = getFacilityColor(facility.facilityType);
@@ -363,19 +341,13 @@ const ProviderLocationMapWithLegend = () => {
             `)
           );
 
-        console.log('Marker created:', marker);
         if (!markers.current[facility.facilityType]) {
           markers.current[facility.facilityType] = [];
         }
         
         markers.current[facility.facilityType].push(marker);
-
-        console.log('Active specialties:', activeSpecialties);
-        console.log('Facility type:', facility.facilityType);
-        console.log('Should show marker:', activeSpecialties[facility.facilityType]);
         
         if (activeSpecialties[facility.facilityType]) {
-          console.log('Adding marker to map');
           marker.addTo(map.current);
         }
       }
@@ -433,12 +405,8 @@ const ProviderLocationMapWithLegend = () => {
   }, [activeServiceTypes]);
 
   const initLegend = (data) => {
-    console.log('Initializing legend with data:', data);
     const uniqueFacilityTypes = Array.from(new Set(data.map(item => item.facilityType).filter(Boolean)));
-    console.log('Unique facility types:', uniqueFacilityTypes);
-    
     const specialties = uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {});
-    console.log('Setting active specialties:', specialties);
     setActiveSpecialties(specialties);
 
     // Initialize service types based on available services - all checked by default
@@ -518,16 +486,29 @@ const ProviderLocationMapWithLegend = () => {
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
         <Box sx={{ display: 'flex', height: '600px' }}>
-          <Box
-            ref={mapContainer}
-            sx={{ 
-              width: '75%', 
-              border: 1, 
-              borderColor: 'grey.300',
-              borderRadius: 1,
-              overflow: 'hidden'
-            }}
-          />
+          <Box sx={{ width: '75%', display: 'flex', flexDirection: 'column' }}>
+            <Box
+              ref={mapContainer}
+              sx={{ 
+                width: '100%', 
+                height: '100%',
+                border: 1, 
+                borderColor: 'grey.300',
+                borderRadius: 1,
+                overflow: 'hidden'
+              }}
+            />
+            <Box sx={{ mt: 1, textAlign: 'right' }}>
+              <a 
+                href="https://docs.google.com/spreadsheets/d/151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k/edit?gid=804300694#gid=804300694"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#666', textDecoration: 'none' }}
+              >
+                Source Data
+              </a>
+            </Box>
+          </Box>
           <Box sx={{ width: '25%', pl: 2 }}>
             <Tabs
               value={tabValue}
