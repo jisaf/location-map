@@ -211,6 +211,63 @@ const ProviderLocationMapWithLegend = () => {
         zoom: 6
       });
 
+      // Add pattern images when the map loads
+      map.current.on('style.load', () => {
+        // Diagonal lines pattern for Frontier
+        const frontierCanvas = document.createElement('canvas');
+        frontierCanvas.width = 20;
+        frontierCanvas.height = 20;
+        const frontierCtx = frontierCanvas.getContext('2d');
+        frontierCtx.strokeStyle = '#000';
+        frontierCtx.lineWidth = 1;
+        frontierCtx.beginPath();
+        frontierCtx.moveTo(0, 20);
+        frontierCtx.lineTo(20, 0);
+        frontierCtx.stroke();
+        map.current.addImage('frontier-pattern', { width: 20, height: 20, data: frontierCtx.getImageData(0, 0, 20, 20).data });
+
+        // Dots pattern for Rural
+        const ruralCanvas = document.createElement('canvas');
+        ruralCanvas.width = 20;
+        ruralCanvas.height = 20;
+        const ruralCtx = ruralCanvas.getContext('2d');
+        ruralCtx.fillStyle = '#000';
+        ruralCtx.beginPath();
+        ruralCtx.arc(10, 10, 2, 0, Math.PI * 2);
+        ruralCtx.fill();
+        map.current.addImage('rural-pattern', { width: 20, height: 20, data: ruralCtx.getImageData(0, 0, 20, 20).data });
+
+        // Grid pattern for Urban
+        const urbanCanvas = document.createElement('canvas');
+        urbanCanvas.width = 20;
+        urbanCanvas.height = 20;
+        const urbanCtx = urbanCanvas.getContext('2d');
+        urbanCtx.strokeStyle = '#000';
+        urbanCtx.lineWidth = 1;
+        urbanCtx.beginPath();
+        urbanCtx.moveTo(10, 0);
+        urbanCtx.lineTo(10, 20);
+        urbanCtx.moveTo(0, 10);
+        urbanCtx.lineTo(20, 10);
+        urbanCtx.stroke();
+        map.current.addImage('urban-pattern', { width: 20, height: 20, data: urbanCtx.getImageData(0, 0, 20, 20).data });
+
+        // Crosshatch pattern for Metropolitan
+        const metroCanvas = document.createElement('canvas');
+        metroCanvas.width = 20;
+        metroCanvas.height = 20;
+        const metroCtx = metroCanvas.getContext('2d');
+        metroCtx.strokeStyle = '#000';
+        metroCtx.lineWidth = 1;
+        metroCtx.beginPath();
+        metroCtx.moveTo(0, 20);
+        metroCtx.lineTo(20, 0);
+        metroCtx.moveTo(0, 0);
+        metroCtx.lineTo(20, 20);
+        metroCtx.stroke();
+        map.current.addImage('metro-pattern', { width: 20, height: 20, data: metroCtx.getImageData(0, 0, 20, 20).data });
+      });
+
       map.current.on('load', () => {
         setMapLoaded(true);
       });
@@ -223,22 +280,29 @@ const ProviderLocationMapWithLegend = () => {
     if (!map.current || !countyBoundaries) return;
 
     if (!map.current.getSource('counties')) {
-      const regionLookup = config.counties.reduce((acc, county) => {
+      const countyLookup = config.counties.reduce((acc, county) => {
         if (county && county.name) {
-          acc[county.name.toUpperCase()] = county.region;
+          acc[county.name.toUpperCase()] = {
+            region: county.region,
+            classification: county.classification
+          };
         }
         return acc;
       }, {});
 
       const updatedGeoJSON = {
         ...countyBoundaries,
-        features: countyBoundaries.features.map(feature => ({
-          ...feature,
-          properties: {
-            ...feature.properties,
-            REGION: feature.properties?.COUNTY ? regionLookup[feature.properties.COUNTY] || 0 : 0
-          }
-        }))
+        features: countyBoundaries.features.map(feature => {
+          const countyInfo = feature.properties?.COUNTY ? countyLookup[feature.properties.COUNTY] : null;
+          return {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              REGION: countyInfo?.region || 0,
+              CLASSIFICATION: countyInfo?.classification || 'Frontier'
+            }
+          };
+        })
       };
 
       map.current.addSource('counties', {
@@ -246,6 +310,7 @@ const ProviderLocationMapWithLegend = () => {
         data: updatedGeoJSON
       });
 
+      // Add base fill layer
       map.current.addLayer({
         'id': 'county-fills',
         'type': 'fill',
@@ -259,6 +324,25 @@ const ProviderLocationMapWithLegend = () => {
             3, '#FFA500',
             4, '#FF6347',
             '#ccc'
+          ],
+          'fill-opacity': 0.3
+        }
+      });
+
+      // Add pattern fill layer
+      map.current.addLayer({
+        'id': 'county-patterns',
+        'type': 'fill',
+        'source': 'counties',
+        'paint': {
+          'fill-pattern': [
+            'match',
+            ['get', 'CLASSIFICATION'],
+            'Frontier', 'frontier-pattern',
+            'Rural', 'rural-pattern',
+            'Urban', 'urban-pattern',
+            'Metropolitan', 'metro-pattern',
+            'frontier-pattern' // default pattern
           ],
           'fill-opacity': 0.5
         }
