@@ -140,12 +140,12 @@ const ProviderLocationMapWithLegend = () => {
   };
 
   const getServicesString = (services) => {
-    const servicesList = [];
-    if (services.inpatient) servicesList.push('Inpatient');
-    if (services.outpatient) servicesList.push('Outpatient');
-    if (services.children) servicesList.push('Children');
-    if (services.adults) servicesList.push('Adults');
-    return servicesList.join(', ');
+    return `
+      Inpatient: ${services.inpatient ? 'Yes' : 'No'}
+      Outpatient: ${services.outpatient ? 'Yes' : 'No'}
+      Children: ${services.children ? 'Yes' : 'No'}
+      Adults: ${services.adults ? 'Yes' : 'No'}
+    `;
   };
 
   const flattenData = (data) => {
@@ -358,7 +358,8 @@ const ProviderLocationMapWithLegend = () => {
               <h3>${facility.facilityName}</h3>
               <p><strong>Type:</strong> ${facility.facilityType}</p>
               <p><strong>Address:</strong> ${facility.address}</p>
-              <p><strong>Services:</strong> ${getServicesString(facility.services)}</p>
+              <p><strong>Services:</strong></p>
+              <pre style="margin: 0; white-space: pre-wrap;">${getServicesString(facility.services)}</pre>
             `)
           );
 
@@ -368,12 +369,19 @@ const ProviderLocationMapWithLegend = () => {
         
         markers.current[facility.facilityType].push(marker);
 
-        if (activeSpecialties[facility.facilityType]) {
+        // Check if facility should be shown based on both specialty and services
+        const shouldShow = activeSpecialties[facility.facilityType] && 
+          (!activeServiceTypes.inpatient || facility.services.inpatient) &&
+          (!activeServiceTypes.outpatient || facility.services.outpatient) &&
+          (!activeServiceTypes.children || facility.services.children) &&
+          (!activeServiceTypes.adults || facility.services.adults);
+
+        if (shouldShow) {
           marker.addTo(map.current);
         }
       }
     });
-  }, [activeSpecialties]);
+  }, [activeSpecialties, activeServiceTypes]);
 
   const addServiceAreaCircles = useCallback((providers) => {
     if (!map.current || !providers) return;
@@ -432,10 +440,10 @@ const ProviderLocationMapWithLegend = () => {
       uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {})
     );
 
-    // Initialize service types based on available services
+    // Initialize service types - all checked by default
     const serviceTypes = ['Inpatient', 'Outpatient', 'Children', 'Adults'];
     setActiveServiceTypes(
-      serviceTypes.reduce((acc, service) => ({ ...acc, [service]: false }), {})
+      serviceTypes.reduce((acc, service) => ({ ...acc, [service.toLowerCase()]: true }), {})
     );
 
     const uniqueRegions = Array.from(
@@ -465,20 +473,42 @@ const ProviderLocationMapWithLegend = () => {
 
   const toggleServiceType = useCallback((serviceType) => {
     setActiveServiceTypes(prev => {
-      const newState = { ...prev, [serviceType]: !prev[serviceType] };
+      const newState = { ...prev, [serviceType.toLowerCase()]: !prev[serviceType.toLowerCase()] };
       
-      const typeCircles = serviceCircles.current[serviceType] || [];
-      typeCircles.forEach(circle => {
-        if (newState[serviceType]) {
-          circle.addTo(map.current);
-        } else {
-          circle.remove();
+      // Remove all markers
+      Object.values(markers.current).forEach(markerArray => {
+        markerArray.forEach(marker => marker.remove());
+      });
+
+      // Re-add markers that match the current filters
+      Object.entries(markers.current).forEach(([facilityType, markerArray]) => {
+        if (activeSpecialties[facilityType]) {
+          markerArray.forEach(marker => {
+            const facility = marker.getPopup()._content;
+            // Parse the facility data from the popup content
+            const services = {
+              inpatient: facility.includes('Inpatient: Yes'),
+              outpatient: facility.includes('Outpatient: Yes'),
+              children: facility.includes('Children: Yes'),
+              adults: facility.includes('Adults: Yes')
+            };
+            
+            const shouldShow = 
+              (!newState.inpatient || services.inpatient) &&
+              (!newState.outpatient || services.outpatient) &&
+              (!newState.children || services.children) &&
+              (!newState.adults || services.adults);
+
+            if (shouldShow) {
+              marker.addTo(map.current);
+            }
+          });
         }
       });
       
       return newState;
     });
-  }, []);
+  }, [activeSpecialties]);
 
   return (
     <Card>
