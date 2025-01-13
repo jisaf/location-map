@@ -155,10 +155,10 @@ const ProviderLocationMapWithLegend = () => {
         latitude,
         county,
         services: {
-          inpatient: item['Inpatient']?.toLowerCase() === 'true' || item['Inpatient'] === true,
-          outpatient: item['Outpatient']?.toLowerCase() === 'true' || item['Outpatient'] === true,
-          children: item['Children']?.toLowerCase() === 'true' || item['Children'] === true,
-          adults: item['Adults']?.toLowerCase() === 'true' || item['Adults'] === true
+          inpatient: String(item['Inpatient']).toLowerCase() === 'true' || item['Inpatient'] === true,
+          outpatient: String(item['Outpatient']).toLowerCase() === 'true' || item['Outpatient'] === true,
+          children: String(item['Children']).toLowerCase() === 'true' || item['Children'] === true,
+          adults: String(item['Adults']).toLowerCase() === 'true' || item['Adults'] === true
         }
       };
     });
