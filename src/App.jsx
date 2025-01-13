@@ -36,31 +36,36 @@ const ProviderLocationMapWithLegend = () => {
   const fetchData = async () => {
     try {
       const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
+        'https://docs.google.com/spreadsheets/d/151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k/gviz/tq&gid=804300694'
       );
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const jsonResponse = await response.json();
-      const rows = jsonResponse.values;
-      
-      if (!rows || rows.length === 0) {
-        throw new Error('No data found in the sheet.');
+      const text = await response.text();
+      // Extract the JSON part from the response (it's wrapped in a callback)
+      const jsonText = text.match(/google\.visualization\.Query\.setResponse\((.*)\);/)?.[1];
+      if (!jsonText) {
+        throw new Error('Invalid response format');
       }
-
-      const headers = rows[0];
-      return rows.slice(1).map(row => {
-        const item = {};
-        headers.forEach((header, index) => {
-          item[header] = row[index];
-        });
-        return item;
-      });
+      
+      const jsonData = JSON.parse(jsonText);
+      const table = jsonData.table;
+      const headers = table.cols.map(col => col.label.trim());
+      
+      return table.rows
+        .map(row => {
+          const item = {};
+          row.c.forEach((cell, index) => {
+            const value = cell?.v ?? null;
+            item[headers[index].replace(/\s+/g, '')] = value;
+          });
+          return item;
+        })
+        .filter(item => item.FacilityName !== null); // Drop rows with null Facility Name
     } catch (error) {
       console.error('Error fetching data from Google Sheets:', error);
-      // Return empty array in case of error to prevent app from crashing
       return [];
     }
   };
@@ -118,12 +123,13 @@ const ProviderLocationMapWithLegend = () => {
   };
 
   const getServicesString = (services) => {
-    const servicesList = [];
-    if (services.inpatient) servicesList.push('Inpatient');
-    if (services.outpatient) servicesList.push('Outpatient');
-    if (services.children) servicesList.push('Children');
-    if (services.adults) servicesList.push('Adults');
-    return servicesList.join(', ');
+    const serviceTypes = ['inpatient', 'outpatient', 'children', 'adults'];
+    return serviceTypes.map(type => {
+      const label = type.charAt(0).toUpperCase() + type.slice(1);
+      const value = services[type];
+      const color = value ? 'green' : 'red';
+      return `<div><strong>${label}:</strong> <span style="color: ${color}">${value ? 'Yes' : 'No'}</span></div>`;
+    }).join('');
   };
 
   const flattenData = (data) => {
@@ -444,18 +450,33 @@ const ProviderLocationMapWithLegend = () => {
     setActiveServiceTypes(prev => {
       const newState = { ...prev, [serviceType]: !prev[serviceType] };
       
-      const typeCircles = serviceCircles.current[serviceType] || [];
-      typeCircles.forEach(circle => {
-        if (newState[serviceType]) {
-          circle.addTo(map.current);
-        } else {
-          circle.remove();
-        }
+      // Get all active service types after the toggle
+      const activeTypes = Object.entries(newState)
+        .filter(([_, isActive]) => isActive)
+        .map(([type]) => type.toLowerCase());
+      
+      // Show markers for facilities that offer any of the active services
+      Object.entries(markers.current).forEach(([facilityType, facilityMarkers]) => {
+        facilityMarkers.forEach(marker => {
+          const facility = providerData.find(f => 
+            f.facilityName === marker.getPopup().getContent().match(/<h3>(.*?)<\/h3>/)[1]
+          );
+          
+          // Show marker if facility offers any of the active services
+          const shouldShow = activeTypes.length === 0 || // Show all if no services selected
+            activeTypes.some(type => facility.services[type]);
+          
+          if (shouldShow && activeSpecialties[facilityType]) {
+            marker.addTo(map.current);
+          } else {
+            marker.remove();
+          }
+        });
       });
       
       return newState;
     });
-  }, []);
+  }, [providerData, activeSpecialties]);
 
   return (
     <Card>
