@@ -3,7 +3,7 @@ import React from 'react';
 export const config = {
   "serviceTypes": [
     "Behavioral health walk-in crisis services",
-    "Withdrawal management services", 
+    "Withdrawal management services",
     "Behavioral health mobile crisis services",
     "Screening, assessment, and diagnosis, including risk assessment, crisis planning, and monitoring to key health indicators",
     "Care coordination",
@@ -52,7 +52,7 @@ export const config = {
       "distances": {
         "Large Metro": "n/a",
         "Metro": "n/a",
-        "Micro": "n/a", 
+        "Micro": "n/a",
         "Rural": "n/a",
         "CEACs": "n/a"
       }
@@ -212,7 +212,7 @@ export const config = {
     {
       "name": "Adams",
       "classification": "Metro",
-      "region": 2
+      "region": 4
     },
     {
       "name": "Alamosa",
@@ -222,22 +222,22 @@ export const config = {
     {
       "name": "Arapahoe",
       "classification": "Metro",
-      "region": 2
+      "region": 4
     },
     {
       "name": "Archuleta",
-      "classification": "Rural", 
+      "classification": "Rural",
       "region": 1
     },
     {
       "name": "Baca",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Bent",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Boulder",
@@ -247,7 +247,7 @@ export const config = {
     {
       "name": "Broomfield",
       "classification": "Metro",
-      "region": 2
+      "region": 3
     },
     {
       "name": "Chaffee",
@@ -257,7 +257,7 @@ export const config = {
     {
       "name": "Cheyenne",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Clear Creek",
@@ -267,22 +267,22 @@ export const config = {
     {
       "name": "Conejos",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Costilla",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Crowley",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Custer",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Delta",
@@ -292,17 +292,17 @@ export const config = {
     {
       "name": "Denver",
       "classification": "Large Metro",
-      "region": 2
+      "region": 4
     },
     {
-      "name": "Delores",
+      "name": "Dolores",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Douglas",
       "classification": "Metro",
-      "region": 3
+      "region": 4
     },
     {
       "name": "Eagle",
@@ -312,7 +312,7 @@ export const config = {
     {
       "name": "Elbert",
       "classification": "Rural",
-      "region": 3
+      "region": 2
     },
     {
       "name": "El Paso",
@@ -337,27 +337,27 @@ export const config = {
     {
       "name": "Grand",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Gunnison",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Hinsdale",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Huerfano",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Jackson",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Jefferson",
@@ -367,12 +367,12 @@ export const config = {
     {
       "name": "Kiowa",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Kit Carson",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Lake",
@@ -392,17 +392,17 @@ export const config = {
     {
       "name": "Las Animas",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Lincoln",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Logan",
       "classification": "Rural",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Mesa",
@@ -412,12 +412,12 @@ export const config = {
     {
       "name": "Mineral",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Moffat",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Montezuma",
@@ -432,27 +432,27 @@ export const config = {
     {
       "name": "Morgan",
       "classification": "Rural",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Otero",
       "classification": "Rural",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Ouray",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Park",
       "classification": "CEAC",
-      "region": 4
+      "region": 3
     },
     {
       "name": "Phillips",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Pitkin",
@@ -462,17 +462,17 @@ export const config = {
     {
       "name": "Prowers",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Pueblo",
       "classification": "Micro",
-      "region": 3
+      "region": 1
     },
     {
       "name": "Rio Blanco",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "Rio Grande",
@@ -482,27 +482,27 @@ export const config = {
     {
       "name": "Routt",
       "classification": "Rural",
-      "region": 2
+      "region": 1
     },
     {
       "name": "Saguache",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "San Juan",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
       "name": "San Miguel",
       "classification": "CEAC",
-      "region": 4
+      "region": 1
     },
     {
-      "name": "Sedwick",
+      "name": "Sedgwick",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Summit",
@@ -517,7 +517,7 @@ export const config = {
     {
       "name": "Washington",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     },
     {
       "name": "Weld",
@@ -527,7 +527,7 @@ export const config = {
     {
       "name": "Yuma",
       "classification": "CEAC",
-      "region": 4
+      "region": 2
     }
   ]
 }

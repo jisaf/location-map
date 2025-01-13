@@ -28,39 +28,50 @@ const ProviderLocationMapWithLegend = () => {
   const markers = useRef({});
   const serviceCircles = useRef({});
 
-  // Google Sheets API configuration
-  const SPREADSHEET_ID = '1-Wyq3Ha-su5uneEIYZ2xvQQ_7T_YgDwLZJ1KcQUYn8Y';  // Replace with your spreadsheet ID
-  const API_KEY = 'AIzaSyBgm4dO0_gUX_7qzPjMuFEtVMGGWoA-qrY';  // Replace with your API key
-  const SHEET_NAME = 'data';
 
   const fetchData = async () => {
     try {
       const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
+        'https://docs.google.com/spreadsheets/d/151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k/gviz/tq?gid=804300694'
       );
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const jsonResponse = await response.json();
-      const rows = jsonResponse.values;
-      
-      if (!rows || rows.length === 0) {
-        throw new Error('No data found in the sheet.');
+      const text = await response.text();
+      // Extract the JSON part from the response (it's wrapped in a callback)
+      const jsonText = text.match(/google\.visualization\.Query\.setResponse\((.*)\);/)?.[1];
+      if (!jsonText) {
+        throw new Error('Invalid response format');
       }
-
-      const headers = rows[0];
-      return rows.slice(1).map(row => {
-        const item = {};
-        headers.forEach((header, index) => {
-          item[header] = row[index];
-        });
-        return item;
-      });
+      console.log(jsonText)
+      const jsonData = JSON.parse(jsonText);
+      console.log('Parsed JSON data:', jsonData);
+      const table = jsonData.table;
+      const headers = table.cols.map(col => col.label.trim());
+      console.log('Headers:', headers);
+      
+      const data = table.rows
+        .map(row => {
+          const item = {};
+          row.c.forEach((cell, index) => {
+            const header = headers[index].replace(/\s+/g, '');
+            if (header === 'Longitude' || header === 'Latitude') {
+              // Parse coordinates as numbers
+              item[header] = cell?.v ? Number(cell.v) : null;
+            } else {
+              item[header] = cell?.v ?? null;
+            }
+          });
+          return item;
+        })
+        .filter(item => item.FacilityName !== null); // Drop rows with null Facility Name
+      
+      console.log('Processed data:', data);
+      return data;
     } catch (error) {
       console.error('Error fetching data from Google Sheets:', error);
-      // Return empty array in case of error to prevent app from crashing
       return [];
     }
   };
@@ -118,12 +129,13 @@ const ProviderLocationMapWithLegend = () => {
   };
 
   const getServicesString = (services) => {
-    const servicesList = [];
-    if (services.inpatient) servicesList.push('Inpatient');
-    if (services.outpatient) servicesList.push('Outpatient');
-    if (services.children) servicesList.push('Children');
-    if (services.adults) servicesList.push('Adults');
-    return servicesList.join(', ');
+    const serviceTypes = ['inpatient', 'outpatient', 'children', 'adults'];
+    return serviceTypes.map(type => {
+      const label = type.charAt(0).toUpperCase() + type.slice(1);
+      const value = services[type];
+      const color = value ? 'green' : 'red';
+      return `<div><strong>${label}:</strong> <span style="color: ${color}">${value ? 'Yes' : 'No'}</span></div>`;
+    }).join('');
   };
 
   const flattenData = (data) => {
@@ -133,30 +145,33 @@ const ProviderLocationMapWithLegend = () => {
     }
 
     return data.map(item => {
-      const longitude = Number(item['Longitude (optional)']);
-      const latitude = Number(item['Latitude (optional)']);
+      console.log(item)
+      // Coordinates should already be numbers from fetchData
+      const longitude = item['Longitude(optional)'];
+      const latitude = item['Latitude(optional)'];
+      console.log('Using coordinates:', { longitude, latitude });
       
       // Get county from coordinates if available
       let county = '';
       if (longitude && latitude && countyBoundaries) {
         county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
         if (county) {
-          console.log(`Found county from coordinates for ${item['Facility Name']}: ${county}`);
+          console.log(`Found county from coordinates for ${item['FacilityName']}: ${county}`);
         }
       }
-      
+      console.log('Processing item:', item);
       return {
-        facilityName: item['Facility Name'],
-        facilityType: item['Facility Type'],
-        address: `${item['Street Address']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
+        facilityName: item['FacilityName'],
+        facilityType: item['FacilityType'],
+        address: `${item['StreetAddress']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
         longitude,
         latitude,
         county,
         services: {
-          inpatient: item['Inpatient']?.toLowerCase() === 'true' || item['Inpatient'] === true,
-          outpatient: item['Outpatient']?.toLowerCase() === 'true' || item['Outpatient'] === true,
-          children: item['Children']?.toLowerCase() === 'true' || item['Children'] === true,
-          adults: item['Adults']?.toLowerCase() === 'true' || item['Adults'] === true
+          inpatient: String(item['Inpatient']).toLowerCase() === 'true' || item['Inpatient'] === true,
+          outpatient: String(item['Outpatient']).toLowerCase() === 'true' || item['Outpatient'] === true,
+          children: String(item['Children']).toLowerCase() === 'true' || item['Children'] === true,
+          adults: String(item['Adults']).toLowerCase() === 'true' || item['Adults'] === true
         }
       };
     });
@@ -175,7 +190,9 @@ const ProviderLocationMapWithLegend = () => {
 
         // Get provider data
         const data = await fetchData();
+        console.log('Raw data from fetchData:', data);
         const enrichedData = flattenData(data);
+        console.log('Enriched data:', enrichedData);
         
         setProviderData(enrichedData);
         initMap();
@@ -197,9 +214,11 @@ const ProviderLocationMapWithLegend = () => {
   }, [mapLoaded, countyBoundaries, providerData]);
 
   const initMap = () => {
+    console.log('Initializing map, current map ref:', map.current);
     if (map.current) return;
 
     try {
+      console.log('Creating new map instance');
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v10',
@@ -208,7 +227,7 @@ const ProviderLocationMapWithLegend = () => {
       });
 
       map.current.on('load', () => {
-        console.log('Map loaded');
+        console.log('Map loaded successfully');
         setMapLoaded(true);
       });
     } catch (error) {
@@ -312,15 +331,20 @@ const ProviderLocationMapWithLegend = () => {
   };
 
   const addProviderMarkers = useCallback((facilities) => {
+    console.log('Adding provider markers with facilities:', facilities);
+    console.log('Map reference:', map.current);
     if (!map.current || !facilities) return;
 
+    console.log('Clearing existing markers');
     Object.values(markers.current).forEach(markerArray => {
       markerArray.forEach(marker => marker.remove());
     });
     markers.current = {};
 
     facilities.forEach((facility) => {
+      console.log('Processing facility for marker:', facility);
       if (facility.longitude && facility.latitude) {
+        console.log('Creating marker for facility:', facility.facilityName);
         const el = document.createElement('div');
         el.className = 'marker';
         el.style.backgroundColor = getFacilityColor(facility.facilityType);
@@ -339,13 +363,19 @@ const ProviderLocationMapWithLegend = () => {
             `)
           );
 
+        console.log('Marker created:', marker);
         if (!markers.current[facility.facilityType]) {
           markers.current[facility.facilityType] = [];
         }
         
         markers.current[facility.facilityType].push(marker);
 
+        console.log('Active specialties:', activeSpecialties);
+        console.log('Facility type:', facility.facilityType);
+        console.log('Should show marker:', activeSpecialties[facility.facilityType]);
+        
         if (activeSpecialties[facility.facilityType]) {
+          console.log('Adding marker to map');
           marker.addTo(map.current);
         }
       }
@@ -403,16 +433,18 @@ const ProviderLocationMapWithLegend = () => {
   }, [activeServiceTypes]);
 
   const initLegend = (data) => {
+    console.log('Initializing legend with data:', data);
     const uniqueFacilityTypes = Array.from(new Set(data.map(item => item.facilityType).filter(Boolean)));
+    console.log('Unique facility types:', uniqueFacilityTypes);
     
-    setActiveSpecialties(
-      uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {})
-    );
+    const specialties = uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {});
+    console.log('Setting active specialties:', specialties);
+    setActiveSpecialties(specialties);
 
-    // Initialize service types based on available services
+    // Initialize service types based on available services - all checked by default
     const serviceTypes = ['Inpatient', 'Outpatient', 'Children', 'Adults'];
     setActiveServiceTypes(
-      serviceTypes.reduce((acc, service) => ({ ...acc, [service]: false }), {})
+      serviceTypes.reduce((acc, service) => ({ ...acc, [service]: true }), {})
     );
 
     const uniqueRegions = Array.from(
@@ -444,18 +476,40 @@ const ProviderLocationMapWithLegend = () => {
     setActiveServiceTypes(prev => {
       const newState = { ...prev, [serviceType]: !prev[serviceType] };
       
-      const typeCircles = serviceCircles.current[serviceType] || [];
-      typeCircles.forEach(circle => {
-        if (newState[serviceType]) {
-          circle.addTo(map.current);
-        } else {
-          circle.remove();
-        }
+      // Get all active service types after the toggle
+      const activeTypes = Object.entries(newState)
+        .filter(([_, isActive]) => isActive)
+        .map(([type]) => type.toLowerCase());
+      
+      // Show markers for facilities that offer any of the active services
+      Object.entries(markers.current).forEach(([facilityType, facilityMarkers]) => {
+        facilityMarkers.forEach(marker => {
+          // Find facility by coordinates since they're unique
+          const coords = marker.getLngLat();
+          const facility = providerData.find(f => 
+            f.longitude === coords.lng && f.latitude === coords.lat
+          );
+          
+          if (!facility) {
+            console.warn('Could not find facility for marker at', coords);
+            return;
+          }
+          
+          // Show marker if facility offers any of the active services
+          const shouldShow = activeTypes.length === 0 || // Show all if no services selected
+            activeTypes.some(type => facility.services[type]);
+          
+          if (shouldShow && activeSpecialties[facilityType]) {
+            marker.addTo(map.current);
+          } else {
+            marker.remove();
+          }
+        });
       });
       
       return newState;
     });
-  }, []);
+  }, [providerData, activeSpecialties]);
 
   return (
     <Card>
