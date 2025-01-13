@@ -47,10 +47,12 @@ const ProviderLocationMapWithLegend = () => {
       }
       
       const jsonData = JSON.parse(jsonText);
+      console.log('Parsed JSON data:', jsonData);
       const table = jsonData.table;
       const headers = table.cols.map(col => col.label.trim());
+      console.log('Headers:', headers);
       
-      return table.rows
+      const data = table.rows
         .map(row => {
           const item = {};
           row.c.forEach((cell, index) => {
@@ -60,6 +62,9 @@ const ProviderLocationMapWithLegend = () => {
           return item;
         })
         .filter(item => item.FacilityName !== null); // Drop rows with null Facility Name
+      
+      console.log('Processed data:', data);
+      return data;
     } catch (error) {
       console.error('Error fetching data from Google Sheets:', error);
       return [];
@@ -135,22 +140,22 @@ const ProviderLocationMapWithLegend = () => {
     }
 
     return data.map(item => {
-      const longitude = Number(item['Longitude (optional)']);
-      const latitude = Number(item['Latitude (optional)']);
+      const longitude = Number(item['Longitude']);
+      const latitude = Number(item['Latitude']);
       
       // Get county from coordinates if available
       let county = '';
       if (longitude && latitude && countyBoundaries) {
         county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
         if (county) {
-          console.log(`Found county from coordinates for ${item['Facility Name']}: ${county}`);
+          console.log(`Found county from coordinates for ${item['FacilityName']}: ${county}`);
         }
       }
-      
-      return {
-        facilityName: item['Facility Name'],
-        facilityType: item['Facility Type'],
-        address: `${item['Street Address']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
+      console.log('Processing item:', item);
+      const facilityData = {
+        facilityName: item['FacilityName'],
+        facilityType: item['FacilityType'],
+        address: `${item['Address']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
         longitude,
         latitude,
         county,
@@ -405,11 +410,13 @@ const ProviderLocationMapWithLegend = () => {
   }, [activeServiceTypes]);
 
   const initLegend = (data) => {
+    console.log('Initializing legend with data:', data);
     const uniqueFacilityTypes = Array.from(new Set(data.map(item => item.facilityType).filter(Boolean)));
+    console.log('Unique facility types:', uniqueFacilityTypes);
     
-    setActiveSpecialties(
-      uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {})
-    );
+    const specialties = uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {});
+    console.log('Setting active specialties:', specialties);
+    setActiveSpecialties(specialties);
 
     // Initialize service types based on available services
     const serviceTypes = ['Inpatient', 'Outpatient', 'Children', 'Adults'];
