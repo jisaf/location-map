@@ -28,15 +28,11 @@ const ProviderLocationMapWithLegend = () => {
   const markers = useRef({});
   const serviceCircles = useRef({});
 
-  // Google Sheets API configuration
-  const SPREADSHEET_ID = '1-Wyq3Ha-su5uneEIYZ2xvQQ_7T_YgDwLZJ1KcQUYn8Y';  // Replace with your spreadsheet ID
-  const API_KEY = 'AIzaSyBgm4dO0_gUX_7qzPjMuFEtVMGGWoA-qrY';  // Replace with your API key
-  const SHEET_NAME = 'data';
 
   const fetchData = async () => {
     try {
       const response = await fetch(
-        'https://docs.google.com/spreadsheets/d/151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k/gviz/tq&gid=804300694'
+        'https://docs.google.com/spreadsheets/d/151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k/gviz/tq?gid=804300694'
       );
       
       if (!response.ok) {
