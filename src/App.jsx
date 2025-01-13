@@ -40,6 +40,7 @@ const ProviderLocationMapWithLegend = () => {
     
     try {
       const jsonData = JSON.parse(jsonString);
+      console.log(1, jsonData)
       
       // Extract headers and rows from the response
       const headers = jsonData.table.cols.map(col => col.label);
@@ -73,7 +74,7 @@ const ProviderLocationMapWithLegend = () => {
       
       const responseText = await response.text();
       const rows = parseGoogleSheetsResponse(responseText);
-      
+      console.log(2, rows)
       if (!rows || rows.length === 0) {
         throw new Error('No data found in the sheet.');
       }
@@ -165,7 +166,7 @@ const ProviderLocationMapWithLegend = () => {
           console.log(`Found county from coordinates for ${item['Facility Name']}: ${county}`);
         }
       }
-      
+      console.log(3, item)
       return {
         facilityName: item['Facility Name'],
         facilityType: item['Facility Type'],
@@ -174,10 +175,10 @@ const ProviderLocationMapWithLegend = () => {
         latitude,
         county,
         services: {
-          inpatient: item['Inpatient']?.toLowerCase() === 'true' || item['Inpatient'] === true,
-          outpatient: item['Outpatient']?.toLowerCase() === 'true' || item['Outpatient'] === true,
-          children: item['Children']?.toLowerCase() === 'true' || item['Children'] === true,
-          adults: item['Adults']?.toLowerCase() === 'true' || item['Adults'] === true
+          inpatient: String(item['Inpatient'] || '').toLowerCase() === 'true',
+          outpatient: String(item['Outpatient'] || '').toLowerCase() === 'true',
+          children: String(item['Children'] || '').toLowerCase() === 'true',
+          adults: String(item['Adults'] || '').toLowerCase() === 'true'
         }
       };
     });
