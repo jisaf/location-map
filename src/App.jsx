@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
-import Papa from 'papaparse';
 import { config } from './geographic-system-rules';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { google } from 'googleapis';
+// Using direct Google Sheets API instead of googleapis
 
 import { 
   Card, 
@@ -29,39 +28,40 @@ const ProviderLocationMapWithLegend = () => {
   const markers = useRef({});
   const serviceCircles = useRef({});
 
-  // Google Sheets configuration
-  const SPREADSHEET_CONFIG = {
-    spreadsheetId: process.env.REACT_APP_SPREADSHEET_ID,
-    apiKey: process.env.REACT_APP_GOOGLE_API_KEY,
-    sheetName: process.env.REACT_APP_SHEET_NAME || 'data'
-  };
+  // Google Sheets API configuration
+  const SPREADSHEET_ID = '1-Wyq3Ha-su5uneEIYZ2xvQQ_7T_YgDwLZJ1KcQUYn8Y';  // Replace with your spreadsheet ID
+  const API_KEY = 'AIzaSyBgm4dO0_gUX_7qzPjMuFEtVMGGWoA-qrY';  // Replace with your API key
+  const SHEET_NAME = 'data';
 
-  const fetchGoogleSheetsData = async (sheetName) => {
+  const fetchData = async () => {
     try {
-      const sheets = google.sheets({ version: 'v4', auth: SPREADSHEET_CONFIG.apiKey });
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_CONFIG.spreadsheetId,
-        range: sheetName,
-      });
-
-      const rows = response.data.values;
+      const response = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const jsonResponse = await response.json();
+      const rows = jsonResponse.values;
+      
       if (!rows || rows.length === 0) {
         throw new Error('No data found in the sheet.');
       }
 
       const headers = rows[0];
-      const data = rows.slice(1).map(row => {
+      return rows.slice(1).map(row => {
         const item = {};
         headers.forEach((header, index) => {
           item[header] = row[index];
         });
         return item;
       });
-
-      return data;
     } catch (error) {
-      console.error(`Error fetching data from sheet ${sheetName}:`, error);
-      throw error;
+      console.error('Error fetching data from Google Sheets:', error);
+      // Return empty array in case of error to prevent app from crashing
+      return [];
     }
   };
 
@@ -163,46 +163,29 @@ const ProviderLocationMapWithLegend = () => {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
       try {
         // Fetch county boundaries first
-        const geoJsonResponse = await fetch('./Colorado_County_Boundaries.geojson', {
-          cache: 'no-store'
-        });
+        const geoJsonResponse = await fetch('./Colorado_County_Boundaries.geojson');
         if (!geoJsonResponse.ok) {
           throw new Error(`HTTP error! status: ${geoJsonResponse.status}`);
         }
         const geoJsonData = await geoJsonResponse.json();
         setCountyBoundaries(geoJsonData);
 
-        // Fetch provider data from Google Sheets
-        const sheetData = await fetchGoogleSheetsData(SPREADSHEET_CONFIG.sheetName);
-        
-        const enrichedData = flattenData(sheetData);
-        
-        // Debug log to verify county data
-        console.log('Sample of processed data:', 
-          enrichedData.slice(0, 3).map(item => ({
-            name: item['Provider Last Name'],
-            county: item.county,
-            pri_spec: item.pri_spec,
-            location: [item.longitude, item.latitude]
-          }))
-        );
+        // Get provider data
+        const data = await fetchData();
+        const enrichedData = flattenData(data);
         
         setProviderData(enrichedData);
         initMap();
         initLegend(enrichedData);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error loading data:', error);
       }
     };
 
-    if (SPREADSHEET_CONFIG.spreadsheetId && SPREADSHEET_CONFIG.apiKey) {
-      fetchData();
-    } else {
-      console.error('Missing required Google Sheets configuration. Please set REACT_APP_SPREADSHEET_ID and REACT_APP_GOOGLE_API_KEY environment variables.');
-    }
+    loadData();
   }, []);
 
   useEffect(() => {
