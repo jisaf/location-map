@@ -18,7 +18,12 @@ import {
 const ProviderLocationMapWithLegend = () => {
   const [providerData, setProviderData] = useState([]);
   const [activeSpecialties, setActiveSpecialties] = useState({});
-  const [activeServiceTypes, setActiveServiceTypes] = useState({});
+  const [activeServiceTypes, setActiveServiceTypes] = useState({
+    inpatient: true,
+    outpatient: true,
+    children: true,
+    adults: true
+  });
   const [activeRegions, setActiveRegions] = useState({});
   const [countyBoundaries, setCountyBoundaries] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -351,17 +356,23 @@ const ProviderLocationMapWithLegend = () => {
         el.style.height = '8px';
         el.style.borderRadius = '50%';
 
+        // Create marker and store facility data with it
         const marker = new mapboxgl.Marker(el)
-          .setLngLat([facility.longitude, facility.latitude])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25 }).setHTML(`
-              <h3>${facility.facilityName}</h3>
-              <p><strong>Type:</strong> ${facility.facilityType}</p>
-              <p><strong>Address:</strong> ${facility.address}</p>
-              <p><strong>Services:</strong></p>
-              <pre style="margin: 0; white-space: pre-wrap;">${getServicesString(facility.services)}</pre>
-            `)
-          );
+          .setLngLat([facility.longitude, facility.latitude]);
+        
+        // Store the facility data directly on the marker
+        marker.facilityData = facility;
+        
+        // Set the popup
+        marker.setPopup(
+          new mapboxgl.Popup({ offset: 25 }).setHTML(`
+            <h3>${facility.facilityName}</h3>
+            <p><strong>Type:</strong> ${facility.facilityType}</p>
+            <p><strong>Address:</strong> ${facility.address}</p>
+            <p><strong>Services:</strong></p>
+            <pre style="margin: 0; white-space: pre-wrap;">${getServicesString(facility.services)}</pre>
+          `)
+        );
 
         if (!markers.current[facility.facilityType]) {
           markers.current[facility.facilityType] = [];
@@ -484,14 +495,8 @@ const ProviderLocationMapWithLegend = () => {
       Object.entries(markers.current).forEach(([facilityType, markerArray]) => {
         if (activeSpecialties[facilityType]) {
           markerArray.forEach(marker => {
-            const facility = marker.getPopup()._content;
-            // Parse the facility data from the popup content
-            const services = {
-              inpatient: facility.includes('Inpatient: Yes'),
-              outpatient: facility.includes('Outpatient: Yes'),
-              children: facility.includes('Children: Yes'),
-              adults: facility.includes('Adults: Yes')
-            };
+            const facility = marker.facilityData;
+            const services = facility.services;
             
             const shouldShow = 
               (!newState.inpatient || services.inpatient) &&
