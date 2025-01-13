@@ -45,7 +45,7 @@ const ProviderLocationMapWithLegend = () => {
       if (!jsonText) {
         throw new Error('Invalid response format');
       }
-      
+      console.log(jsonText)
       const jsonData = JSON.parse(jsonText);
       console.log('Parsed JSON data:', jsonData);
       const table = jsonData.table;
@@ -145,9 +145,10 @@ const ProviderLocationMapWithLegend = () => {
     }
 
     return data.map(item => {
+      console.log(item)
       // Coordinates should already be numbers from fetchData
-      const longitude = item['Longitude (optional)'];
-      const latitude = item['Latitude (optional)'];
+      const longitude = item['Longitude(optional)'];
+      const latitude = item['Latitude(optional)'];
       console.log('Using coordinates:', { longitude, latitude });
       
       // Get county from coordinates if available
@@ -440,10 +441,10 @@ const ProviderLocationMapWithLegend = () => {
     console.log('Setting active specialties:', specialties);
     setActiveSpecialties(specialties);
 
-    // Initialize service types based on available services
+    // Initialize service types based on available services - all checked by default
     const serviceTypes = ['Inpatient', 'Outpatient', 'Children', 'Adults'];
     setActiveServiceTypes(
-      serviceTypes.reduce((acc, service) => ({ ...acc, [service]: false }), {})
+      serviceTypes.reduce((acc, service) => ({ ...acc, [service]: true }), {})
     );
 
     const uniqueRegions = Array.from(
@@ -483,9 +484,16 @@ const ProviderLocationMapWithLegend = () => {
       // Show markers for facilities that offer any of the active services
       Object.entries(markers.current).forEach(([facilityType, facilityMarkers]) => {
         facilityMarkers.forEach(marker => {
+          // Find facility by coordinates since they're unique
+          const coords = marker.getLngLat();
           const facility = providerData.find(f => 
-            f.facilityName === marker.getPopup().getContent().match(/<h3>(.*?)<\/h3>/)[1]
+            f.longitude === coords.lng && f.latitude === coords.lat
           );
+          
+          if (!facility) {
+            console.warn('Could not find facility for marker at', coords);
+            return;
+          }
           
           // Show marker if facility offers any of the active services
           const shouldShow = activeTypes.length === 0 || // Show all if no services selected
