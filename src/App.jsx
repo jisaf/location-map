@@ -213,59 +213,61 @@ const ProviderLocationMapWithLegend = () => {
 
       // Add pattern images when the map loads
       map.current.on('style.load', () => {
-        // Diagonal lines pattern for Frontier
+        // Diagonal lines pattern for Frontier (sparse)
         const frontierCanvas = document.createElement('canvas');
-        frontierCanvas.width = 20;
-        frontierCanvas.height = 20;
+        frontierCanvas.width = 16;
+        frontierCanvas.height = 16;
         const frontierCtx = frontierCanvas.getContext('2d');
-        frontierCtx.strokeStyle = '#000';
+        frontierCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         frontierCtx.lineWidth = 1;
         frontierCtx.beginPath();
-        frontierCtx.moveTo(0, 20);
-        frontierCtx.lineTo(20, 0);
+        frontierCtx.moveTo(0, 16);
+        frontierCtx.lineTo(16, 0);
         frontierCtx.stroke();
-        map.current.addImage('frontier-pattern', { width: 20, height: 20, data: frontierCtx.getImageData(0, 0, 20, 20).data });
+        map.current.addImage('frontier-pattern', { width: 16, height: 16, data: frontierCtx.getImageData(0, 0, 16, 16).data });
 
-        // Dots pattern for Rural
+        // Horizontal lines pattern for Rural
         const ruralCanvas = document.createElement('canvas');
-        ruralCanvas.width = 20;
-        ruralCanvas.height = 20;
+        ruralCanvas.width = 12;
+        ruralCanvas.height = 12;
         const ruralCtx = ruralCanvas.getContext('2d');
-        ruralCtx.fillStyle = '#000';
+        ruralCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ruralCtx.lineWidth = 1;
         ruralCtx.beginPath();
-        ruralCtx.arc(10, 10, 2, 0, Math.PI * 2);
-        ruralCtx.fill();
-        map.current.addImage('rural-pattern', { width: 20, height: 20, data: ruralCtx.getImageData(0, 0, 20, 20).data });
+        ruralCtx.moveTo(0, 6);
+        ruralCtx.lineTo(12, 6);
+        ruralCtx.stroke();
+        map.current.addImage('rural-pattern', { width: 12, height: 12, data: ruralCtx.getImageData(0, 0, 12, 12).data });
 
-        // Grid pattern for Urban
+        // Grid pattern for Urban (sparse)
         const urbanCanvas = document.createElement('canvas');
-        urbanCanvas.width = 20;
-        urbanCanvas.height = 20;
+        urbanCanvas.width = 16;
+        urbanCanvas.height = 16;
         const urbanCtx = urbanCanvas.getContext('2d');
-        urbanCtx.strokeStyle = '#000';
+        urbanCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         urbanCtx.lineWidth = 1;
         urbanCtx.beginPath();
-        urbanCtx.moveTo(10, 0);
-        urbanCtx.lineTo(10, 20);
-        urbanCtx.moveTo(0, 10);
-        urbanCtx.lineTo(20, 10);
+        urbanCtx.moveTo(8, 0);
+        urbanCtx.lineTo(8, 16);
+        urbanCtx.moveTo(0, 8);
+        urbanCtx.lineTo(16, 8);
         urbanCtx.stroke();
-        map.current.addImage('urban-pattern', { width: 20, height: 20, data: urbanCtx.getImageData(0, 0, 20, 20).data });
+        map.current.addImage('urban-pattern', { width: 16, height: 16, data: urbanCtx.getImageData(0, 0, 16, 16).data });
 
-        // Crosshatch pattern for Metropolitan
+        // Crosshatch pattern for Metropolitan (sparse)
         const metroCanvas = document.createElement('canvas');
-        metroCanvas.width = 20;
-        metroCanvas.height = 20;
+        metroCanvas.width = 16;
+        metroCanvas.height = 16;
         const metroCtx = metroCanvas.getContext('2d');
-        metroCtx.strokeStyle = '#000';
+        metroCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         metroCtx.lineWidth = 1;
         metroCtx.beginPath();
-        metroCtx.moveTo(0, 20);
-        metroCtx.lineTo(20, 0);
+        metroCtx.moveTo(0, 16);
+        metroCtx.lineTo(16, 0);
         metroCtx.moveTo(0, 0);
-        metroCtx.lineTo(20, 20);
+        metroCtx.lineTo(16, 16);
         metroCtx.stroke();
-        map.current.addImage('metro-pattern', { width: 20, height: 20, data: metroCtx.getImageData(0, 0, 20, 20).data });
+        map.current.addImage('metro-pattern', { width: 16, height: 16, data: metroCtx.getImageData(0, 0, 16, 16).data });
       });
 
       map.current.on('load', () => {
