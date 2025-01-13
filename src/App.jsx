@@ -153,8 +153,8 @@ const ProviderLocationMapWithLegend = () => {
         latitude,
         county,
         services: {
-          inpatient: item['Inpatient']?.toLowerCase() === 'true' || item['Inpatient'] === true,
-          outpatient: item['Outpatient']?.toLowerCase() === 'true' || item['Outpatient'] === true,
+          inpatient: item['Inpatient']?.toString().trim().replace(/['"]/g, '').toLowerCase() === 'true' || item['Inpatient'] === true,
+          outpatient: item['Outpatient']?.toString().trim().replace(/['"]/g, '').toLowerCase() === 'true' || item['Outpatient'] === true,
           children: item['Children']?.toLowerCase() === 'true' || item['Children'] === true,
           adults: item['Adults']?.toLowerCase() === 'true' || item['Adults'] === true
         }
