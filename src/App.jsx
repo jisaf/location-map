@@ -381,11 +381,12 @@ const ProviderLocationMapWithLegend = () => {
         markers.current[facility.facilityType].push(marker);
 
         // Check if facility should be shown based on both specialty and services
-        const shouldShow = activeSpecialties[facility.facilityType] && 
-          (!activeServiceTypes.inpatient || facility.services.inpatient) &&
-          (!activeServiceTypes.outpatient || facility.services.outpatient) &&
-          (!activeServiceTypes.children || facility.services.children) &&
-          (!activeServiceTypes.adults || facility.services.adults);
+        const shouldShow = activeSpecialties[facility.facilityType] && (
+          (activeServiceTypes.inpatient && facility.services.inpatient) ||
+          (activeServiceTypes.outpatient && facility.services.outpatient) ||
+          (activeServiceTypes.children && facility.services.children) ||
+          (activeServiceTypes.adults && facility.services.adults)
+        );
 
         if (shouldShow) {
           marker.addTo(map.current);
@@ -485,7 +486,7 @@ const ProviderLocationMapWithLegend = () => {
   const toggleServiceType = useCallback((serviceType) => {
     setActiveServiceTypes(prev => {
       const newState = { ...prev, [serviceType.toLowerCase()]: !prev[serviceType.toLowerCase()] };
-      
+      console.log(4, newState)
       // Remove all markers
       Object.values(markers.current).forEach(markerArray => {
         markerArray.forEach(marker => marker.remove());
@@ -493,17 +494,20 @@ const ProviderLocationMapWithLegend = () => {
 
       // Re-add markers that match the current filters
       Object.entries(markers.current).forEach(([facilityType, markerArray]) => {
+        console.log(5, activeSpecialties, facilityType)
         if (activeSpecialties[facilityType]) {
           markerArray.forEach(marker => {
+            console.log(6, marker)
             const facility = marker.facilityData;
             const services = facility.services;
-            
+            console.log(7, services)
+            // Show if any of the checked services are offered
             const shouldShow = 
-              (!newState.inpatient || services.inpatient) &&
-              (!newState.outpatient || services.outpatient) &&
-              (!newState.children || services.children) &&
-              (!newState.adults || services.adults);
-
+              (newState.inpatient && services.inpatient) ||
+              (newState.outpatient && services.outpatient) ||
+              (newState.children && services.children) ||
+              (newState.adults && services.adults);
+console.log(8, shouldShow)
             if (shouldShow) {
               marker.addTo(map.current);
             }
