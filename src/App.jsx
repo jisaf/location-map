@@ -29,18 +29,29 @@ const ProviderLocationMapWithLegend = () => {
   const serviceCircles = useRef({});
 
   // Google Sheets API configuration
-  const SPREADSHEET_ID = '1-Wyq3Ha-su5uneEIYZ2xvQQ_7T_YgDwLZJ1KcQUYn8Y';  // Replace with your spreadsheet ID
-  const API_KEY = 'AIzaSyBgm4dO0_gUX_7qzPjMuFEtVMGGWoA-qrY';  // Replace with your API key
-  const SHEET_NAME = 'data';
+  const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID;
+  const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+  const SHEET_NAME = import.meta.env.VITE_SHEET_NAME || 'data';
 
   const fetchData = async () => {
     try {
-      const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
-      );
+      // Check if environment variables are set
+      if (!SPREADSHEET_ID || SPREADSHEET_ID === 'your_spreadsheet_id_here') {
+        throw new Error('Spreadsheet ID not properly configured');
+      }
+      if (!API_KEY || API_KEY === 'your_api_key_here') {
+        throw new Error('API key not properly configured');
+      }
+
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+      console.log('Fetching data from:', url);
+
+      const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        console.error('API Error Details:', errorData);
+        throw new Error(`API error: ${errorData.error?.message || response.statusText}`);
       }
       
       const jsonResponse = await response.json();
