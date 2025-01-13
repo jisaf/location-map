@@ -213,39 +213,39 @@ const ProviderLocationMapWithLegend = () => {
 
       // Add pattern images when the map loads
       map.current.on('style.load', () => {
-        // Large Metro - Dense crosshatch pattern
+        // Large Metro - Dense crosshatch pattern (8px spacing)
         const largeMetroCanvas = document.createElement('canvas');
-        largeMetroCanvas.width = 12;
-        largeMetroCanvas.height = 12;
+        largeMetroCanvas.width = 8;
+        largeMetroCanvas.height = 8;
         const largeMetroCtx = largeMetroCanvas.getContext('2d');
         largeMetroCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         largeMetroCtx.lineWidth = 1;
         largeMetroCtx.beginPath();
-        largeMetroCtx.moveTo(0, 12);
-        largeMetroCtx.lineTo(12, 0);
+        largeMetroCtx.moveTo(0, 8);
+        largeMetroCtx.lineTo(8, 0);
         largeMetroCtx.moveTo(0, 0);
-        largeMetroCtx.lineTo(12, 12);
-        largeMetroCtx.moveTo(0, 6);
-        largeMetroCtx.lineTo(12, 6);
+        largeMetroCtx.lineTo(8, 8);
+        largeMetroCtx.moveTo(0, 4);
+        largeMetroCtx.lineTo(8, 4);
         largeMetroCtx.stroke();
-        map.current.addImage('large-metro-pattern', { width: 12, height: 12, data: largeMetroCtx.getImageData(0, 0, 12, 12).data });
+        map.current.addImage('large-metro-pattern', { width: 8, height: 8, data: largeMetroCtx.getImageData(0, 0, 8, 8).data });
 
-        // Metro - Crosshatch pattern
+        // Metro - Crosshatch pattern (12px spacing)
         const metroCanvas = document.createElement('canvas');
-        metroCanvas.width = 16;
-        metroCanvas.height = 16;
+        metroCanvas.width = 12;
+        metroCanvas.height = 12;
         const metroCtx = metroCanvas.getContext('2d');
         metroCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         metroCtx.lineWidth = 1;
         metroCtx.beginPath();
-        metroCtx.moveTo(0, 16);
-        metroCtx.lineTo(16, 0);
+        metroCtx.moveTo(0, 12);
+        metroCtx.lineTo(12, 0);
         metroCtx.moveTo(0, 0);
-        metroCtx.lineTo(16, 16);
+        metroCtx.lineTo(12, 12);
         metroCtx.stroke();
-        map.current.addImage('metro-pattern', { width: 16, height: 16, data: metroCtx.getImageData(0, 0, 16, 16).data });
+        map.current.addImage('metro-pattern', { width: 12, height: 12, data: metroCtx.getImageData(0, 0, 12, 12).data });
 
-        // Micro - Grid pattern
+        // Micro - Grid pattern (16px spacing)
         const microCanvas = document.createElement('canvas');
         microCanvas.width = 16;
         microCanvas.height = 16;
@@ -260,29 +260,29 @@ const ProviderLocationMapWithLegend = () => {
         microCtx.stroke();
         map.current.addImage('micro-pattern', { width: 16, height: 16, data: microCtx.getImageData(0, 0, 16, 16).data });
 
-        // Rural - Horizontal lines
+        // Rural - Horizontal lines (20px spacing)
         const ruralCanvas = document.createElement('canvas');
-        ruralCanvas.width = 16;
-        ruralCanvas.height = 16;
+        ruralCanvas.width = 20;
+        ruralCanvas.height = 20;
         const ruralCtx = ruralCanvas.getContext('2d');
         ruralCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         ruralCtx.lineWidth = 1;
         ruralCtx.beginPath();
-        ruralCtx.moveTo(0, 8);
-        ruralCtx.lineTo(16, 8);
+        ruralCtx.moveTo(0, 10);
+        ruralCtx.lineTo(20, 10);
         ruralCtx.stroke();
-        map.current.addImage('rural-pattern', { width: 16, height: 16, data: ruralCtx.getImageData(0, 0, 16, 16).data });
+        map.current.addImage('rural-pattern', { width: 20, height: 20, data: ruralCtx.getImageData(0, 0, 20, 20).data });
 
-        // CEACs - Diagonal lines
+        // CEACs - Diagonal lines (24px spacing)
         const ceacsCanvas = document.createElement('canvas');
-        ceacsCanvas.width = 16;
-        ceacsCanvas.height = 16;
+        ceacsCanvas.width = 24;
+        ceacsCanvas.height = 24;
         const ceacsCtx = ceacsCanvas.getContext('2d');
         ceacsCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         ceacsCtx.lineWidth = 1;
         ceacsCtx.beginPath();
-        ceacsCtx.moveTo(0, 16);
-        ceacsCtx.lineTo(16, 0);
+        ceacsCtx.moveTo(0, 24);
+        ceacsCtx.lineTo(24, 0);
         ceacsCtx.stroke();
         map.current.addImage('ceacs-pattern', { width: 16, height: 16, data: ceacsCtx.getImageData(0, 0, 16, 16).data });
       });
