@@ -152,7 +152,7 @@ const ProviderLocationMapWithLegend = () => {
         }
       }
       console.log('Processing item:', item);
-      const facilityData = {
+      return {
         facilityName: item['FacilityName'],
         facilityType: item['FacilityType'],
         address: `${item['Address']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
@@ -182,7 +182,9 @@ const ProviderLocationMapWithLegend = () => {
 
         // Get provider data
         const data = await fetchData();
+        console.log('Raw data from fetchData:', data);
         const enrichedData = flattenData(data);
+        console.log('Enriched data:', enrichedData);
         
         setProviderData(enrichedData);
         initMap();
