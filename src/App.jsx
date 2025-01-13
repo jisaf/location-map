@@ -28,47 +28,57 @@ const ProviderLocationMapWithLegend = () => {
   const markers = useRef({});
   const serviceCircles = useRef({});
 
-  // Google Sheets API configuration
-  const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID;
-  const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-  const SHEET_NAME = import.meta.env.VITE_SHEET_NAME || 'data';
+  // Google Sheets configuration
+  const SPREADSHEET_ID = '151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k';
+  const GID = '804300694';
+
+  const parseGoogleSheetsResponse = (responseText) => {
+    // Remove the Google Visualization API callback wrapper
+    const jsonString = responseText.replace('/*O_o*/', '')
+      .replace('google.visualization.Query.setResponse(', '')
+      .replace(');', '');
+    
+    try {
+      const jsonData = JSON.parse(jsonString);
+      
+      // Extract headers and rows from the response
+      const headers = jsonData.table.cols.map(col => col.label);
+      const rows = jsonData.table.rows.map(row => {
+        const rowData = {};
+        row.c.forEach((cell, index) => {
+          rowData[headers[index]] = cell ? cell.v : null;
+        });
+        return rowData;
+      });
+      
+      return rows;
+    } catch (error) {
+      console.error('Error parsing Google Sheets response:', error);
+      throw error;
+    }
+  };
 
   const fetchData = async () => {
     try {
-      // Check if environment variables are set
-      if (!SPREADSHEET_ID || SPREADSHEET_ID === 'your_spreadsheet_id_here') {
-        throw new Error('Spreadsheet ID not properly configured');
-      }
-      if (!API_KEY || API_KEY === 'your_api_key_here') {
-        throw new Error('API key not properly configured');
-      }
-
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+      const SPREADSHEET_ID = '151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k';
+      const GID = '804300694';
+      const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&tq&gid=${GID}`;
       console.log('Fetching data from:', url);
 
       const response = await fetch(url);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error Details:', errorData);
-        throw new Error(`API error: ${errorData.error?.message || response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const jsonResponse = await response.json();
-      const rows = jsonResponse.values;
+      const responseText = await response.text();
+      const rows = parseGoogleSheetsResponse(responseText);
       
       if (!rows || rows.length === 0) {
         throw new Error('No data found in the sheet.');
       }
 
-      const headers = rows[0];
-      return rows.slice(1).map(row => {
-        const item = {};
-        headers.forEach((header, index) => {
-          item[header] = row[index];
-        });
-        return item;
-      });
+      return rows;
     } catch (error) {
       console.error('Error fetching data from Google Sheets:', error);
       // Return empty array in case of error to prevent app from crashing
