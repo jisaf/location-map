@@ -155,7 +155,7 @@ const ProviderLocationMapWithLegend = () => {
       return {
         facilityName: item['FacilityName'],
         facilityType: item['FacilityType'],
-        address: `${item['Address']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
+        address: `${item['StreetAddress']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
         longitude,
         latitude,
         county,
@@ -206,9 +206,11 @@ const ProviderLocationMapWithLegend = () => {
   }, [mapLoaded, countyBoundaries, providerData]);
 
   const initMap = () => {
+    console.log('Initializing map, current map ref:', map.current);
     if (map.current) return;
 
     try {
+      console.log('Creating new map instance');
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v10',
@@ -217,7 +219,7 @@ const ProviderLocationMapWithLegend = () => {
       });
 
       map.current.on('load', () => {
-        console.log('Map loaded');
+        console.log('Map loaded successfully');
         setMapLoaded(true);
       });
     } catch (error) {
@@ -321,15 +323,20 @@ const ProviderLocationMapWithLegend = () => {
   };
 
   const addProviderMarkers = useCallback((facilities) => {
+    console.log('Adding provider markers with facilities:', facilities);
+    console.log('Map reference:', map.current);
     if (!map.current || !facilities) return;
 
+    console.log('Clearing existing markers');
     Object.values(markers.current).forEach(markerArray => {
       markerArray.forEach(marker => marker.remove());
     });
     markers.current = {};
 
     facilities.forEach((facility) => {
+      console.log('Processing facility for marker:', facility);
       if (facility.longitude && facility.latitude) {
+        console.log('Creating marker for facility:', facility.facilityName);
         const el = document.createElement('div');
         el.className = 'marker';
         el.style.backgroundColor = getFacilityColor(facility.facilityType);
@@ -348,13 +355,19 @@ const ProviderLocationMapWithLegend = () => {
             `)
           );
 
+        console.log('Marker created:', marker);
         if (!markers.current[facility.facilityType]) {
           markers.current[facility.facilityType] = [];
         }
         
         markers.current[facility.facilityType].push(marker);
 
+        console.log('Active specialties:', activeSpecialties);
+        console.log('Facility type:', facility.facilityType);
+        console.log('Should show marker:', activeSpecialties[facility.facilityType]);
+        
         if (activeSpecialties[facility.facilityType]) {
+          console.log('Adding marker to map');
           marker.addTo(map.current);
         }
       }
