@@ -295,7 +295,7 @@ export const config = {
       "region": 4
     },
     {
-      "name": "Delores",
+      "name": "Dolores",
       "classification": "CEAC",
       "region": 1
     },
@@ -500,7 +500,7 @@ export const config = {
       "region": 1
     },
     {
-      "name": "Sedwick",
+      "name": "Sedgwick",
       "classification": "CEAC",
       "region": 2
     },
