@@ -154,7 +154,8 @@ const ProviderLocationMapWithLegend = () => {
       return [];
     }
 
-    return data.map(item => {
+    // Filter out rows where Facility Name is null, undefined, or empty string
+    return data.filter(item => item['Facility Name']).map(item => {
       const longitude = Number(item['Longitude (optional)']);
       const latitude = Number(item['Latitude (optional)']);
       
