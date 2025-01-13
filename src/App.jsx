@@ -213,48 +213,24 @@ const ProviderLocationMapWithLegend = () => {
 
       // Add pattern images when the map loads
       map.current.on('style.load', () => {
-        // Diagonal lines pattern for Frontier (sparse)
-        const frontierCanvas = document.createElement('canvas');
-        frontierCanvas.width = 16;
-        frontierCanvas.height = 16;
-        const frontierCtx = frontierCanvas.getContext('2d');
-        frontierCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        frontierCtx.lineWidth = 1;
-        frontierCtx.beginPath();
-        frontierCtx.moveTo(0, 16);
-        frontierCtx.lineTo(16, 0);
-        frontierCtx.stroke();
-        map.current.addImage('frontier-pattern', { width: 16, height: 16, data: frontierCtx.getImageData(0, 0, 16, 16).data });
+        // Large Metro - Dense crosshatch pattern
+        const largeMetroCanvas = document.createElement('canvas');
+        largeMetroCanvas.width = 12;
+        largeMetroCanvas.height = 12;
+        const largeMetroCtx = largeMetroCanvas.getContext('2d');
+        largeMetroCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        largeMetroCtx.lineWidth = 1;
+        largeMetroCtx.beginPath();
+        largeMetroCtx.moveTo(0, 12);
+        largeMetroCtx.lineTo(12, 0);
+        largeMetroCtx.moveTo(0, 0);
+        largeMetroCtx.lineTo(12, 12);
+        largeMetroCtx.moveTo(0, 6);
+        largeMetroCtx.lineTo(12, 6);
+        largeMetroCtx.stroke();
+        map.current.addImage('large-metro-pattern', { width: 12, height: 12, data: largeMetroCtx.getImageData(0, 0, 12, 12).data });
 
-        // Horizontal lines pattern for Rural
-        const ruralCanvas = document.createElement('canvas');
-        ruralCanvas.width = 12;
-        ruralCanvas.height = 12;
-        const ruralCtx = ruralCanvas.getContext('2d');
-        ruralCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ruralCtx.lineWidth = 1;
-        ruralCtx.beginPath();
-        ruralCtx.moveTo(0, 6);
-        ruralCtx.lineTo(12, 6);
-        ruralCtx.stroke();
-        map.current.addImage('rural-pattern', { width: 12, height: 12, data: ruralCtx.getImageData(0, 0, 12, 12).data });
-
-        // Grid pattern for Urban (sparse)
-        const urbanCanvas = document.createElement('canvas');
-        urbanCanvas.width = 16;
-        urbanCanvas.height = 16;
-        const urbanCtx = urbanCanvas.getContext('2d');
-        urbanCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        urbanCtx.lineWidth = 1;
-        urbanCtx.beginPath();
-        urbanCtx.moveTo(8, 0);
-        urbanCtx.lineTo(8, 16);
-        urbanCtx.moveTo(0, 8);
-        urbanCtx.lineTo(16, 8);
-        urbanCtx.stroke();
-        map.current.addImage('urban-pattern', { width: 16, height: 16, data: urbanCtx.getImageData(0, 0, 16, 16).data });
-
-        // Crosshatch pattern for Metropolitan (sparse)
+        // Metro - Crosshatch pattern
         const metroCanvas = document.createElement('canvas');
         metroCanvas.width = 16;
         metroCanvas.height = 16;
@@ -268,6 +244,47 @@ const ProviderLocationMapWithLegend = () => {
         metroCtx.lineTo(16, 16);
         metroCtx.stroke();
         map.current.addImage('metro-pattern', { width: 16, height: 16, data: metroCtx.getImageData(0, 0, 16, 16).data });
+
+        // Micro - Grid pattern
+        const microCanvas = document.createElement('canvas');
+        microCanvas.width = 16;
+        microCanvas.height = 16;
+        const microCtx = microCanvas.getContext('2d');
+        microCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        microCtx.lineWidth = 1;
+        microCtx.beginPath();
+        microCtx.moveTo(8, 0);
+        microCtx.lineTo(8, 16);
+        microCtx.moveTo(0, 8);
+        microCtx.lineTo(16, 8);
+        microCtx.stroke();
+        map.current.addImage('micro-pattern', { width: 16, height: 16, data: microCtx.getImageData(0, 0, 16, 16).data });
+
+        // Rural - Horizontal lines
+        const ruralCanvas = document.createElement('canvas');
+        ruralCanvas.width = 16;
+        ruralCanvas.height = 16;
+        const ruralCtx = ruralCanvas.getContext('2d');
+        ruralCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ruralCtx.lineWidth = 1;
+        ruralCtx.beginPath();
+        ruralCtx.moveTo(0, 8);
+        ruralCtx.lineTo(16, 8);
+        ruralCtx.stroke();
+        map.current.addImage('rural-pattern', { width: 16, height: 16, data: ruralCtx.getImageData(0, 0, 16, 16).data });
+
+        // CEACs - Diagonal lines
+        const ceacsCanvas = document.createElement('canvas');
+        ceacsCanvas.width = 16;
+        ceacsCanvas.height = 16;
+        const ceacsCtx = ceacsCanvas.getContext('2d');
+        ceacsCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ceacsCtx.lineWidth = 1;
+        ceacsCtx.beginPath();
+        ceacsCtx.moveTo(0, 16);
+        ceacsCtx.lineTo(16, 0);
+        ceacsCtx.stroke();
+        map.current.addImage('ceacs-pattern', { width: 16, height: 16, data: ceacsCtx.getImageData(0, 0, 16, 16).data });
       });
 
       map.current.on('load', () => {
@@ -340,11 +357,12 @@ const ProviderLocationMapWithLegend = () => {
           'fill-pattern': [
             'match',
             ['get', 'CLASSIFICATION'],
-            'Frontier', 'frontier-pattern',
+            'Large Metro', 'large-metro-pattern',
+            'Metro', 'metro-pattern',
+            'Micro', 'micro-pattern',
             'Rural', 'rural-pattern',
-            'Urban', 'urban-pattern',
-            'Metropolitan', 'metro-pattern',
-            'frontier-pattern' // default pattern
+            'CEACs', 'ceacs-pattern',
+            'rural-pattern' // default pattern
           ],
           'fill-opacity': 0.5
         }
