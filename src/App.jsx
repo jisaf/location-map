@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
 import { config } from './geographic-system-rules';
 import 'mapbox-gl/dist/mapbox-gl.css';
-
-mapboxgl.accessToken = 'pk.eyJ1IjoiamlzYWYiLCJhIjoiY2xwdnBwNmxqMDFsNzJpcXZyNHcwOGVvdyJ9.VWzxBbzLWUDoXOOXvlYaXw';
 // Using direct Google Sheets API instead of googleapis
 
 import { 
@@ -148,8 +146,8 @@ const ProviderLocationMapWithLegend = () => {
 
     return data.map(item => {
       // Coordinates should already be numbers from fetchData
-      const longitude = item['Longitude'];
-      const latitude = item['Latitude'];
+      const longitude = item['Longitude (optional)'];
+      const latitude = item['Latitude (optional)'];
       console.log('Using coordinates:', { longitude, latitude });
       
       // Get county from coordinates if available
