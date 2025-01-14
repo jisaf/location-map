@@ -535,7 +535,7 @@ const ProviderLocationMapWithLegend = () => {
               sx={{ borderBottom: 1, borderColor: 'divider' }}
             >
               <Tab label="Facilities" />
-              <Tab label="Services - TODO" />
+              <Tab label="Services" />
             </Tabs>
             
             <Box sx={{ mt: 2 }}>
