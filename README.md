@@ -1,98 +1,121 @@
 # Location Map with Google Sheets Integration
 
-This application displays provider locations on a map, with data sourced from Google Sheets. Built with React + Vite.
+This application displays facility locations on a map, with data dynamically sourced from Google Sheets. Built with React + Vite and hosted on GitHub Pages.
 
-## Google Sheets Setup
+## Live Demo
+The application is hosted at: https://jisaf.github.io/location-map/
 
-1. Create a Google Cloud Project:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select an existing one
-   - Enable the Google Sheets API for your project
+## Implementation Overview
 
-2. Create API Credentials:
-   - In the Google Cloud Console, go to "APIs & Services" > "Credentials"
-   - Click "Create Credentials" and select "API Key"
-   - Copy the generated API key
+This is a 100% client-side JavaScript application that runs entirely in the browser with no server requirements. The application features:
 
-3. Create a Google Spreadsheet:
-   - Create a new Google Spreadsheet
-   - Create three sheets named:
-     - `provider_data`
-     - `jail_data`
-     - `hospital_data`
-   - Each sheet should have the following columns (matching the previous CSV format):
-     - Provider sheet: Provider Last Name, Provider First Name, NPI, pri_spec, gndr, adr_ln_1, City, ZIP Code, longitude, latitude, county
-     - Jail sheet: Name, Address, City, Zip Code, X, Y, county
-     - Hospital sheet: Facility_Name, Facility_Type, Address_Full, longitude, latitude, County
+- Dynamic facility location mapping using Mapbox GL JS
+- Real-time data integration with Google Sheets
+- Facility type filtering with dynamic enumeration
+- Service type filtering (inpatient, outpatient, children, adults)
+- Regional visualization with county boundaries
+- Interactive popups with facility details
 
-4. Configure Environment Variables:
-   Create a `.env` file in the project root with:
+## Data Source
+
+The application pulls data from a [public Google Sheet](https://docs.google.com/spreadsheets/d/151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k/edit?gid=804300694#gid=804300694) using a stable but deprecated method that doesn't require API keys. The sheet includes:
+
+- Facility information (name, type, address)
+- Geographic coordinates (latitude/longitude)
+- Available services (inpatient, outpatient, children, adults)
+- Regional classification
+
+### Geocoding
+The Google Sheet includes an Apps Script function that automatically calculates latitude/longitude coordinates from addresses. The script is available [here](https://script.google.com/u/0/home/projects/1JTY0qNM_JApgpkkCxITfBaXF3V11JADxo6Z5BmVLnHKIQ4Zv6NCk4_8F/edit).
+
+## Setup Requirements
+
+1. Mapbox API Key:
+   - Sign up for a free account at [Mapbox](https://www.mapbox.com/)
+   - Create an API key
+   - Add it to your environment configuration
+
+## Development Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/jisaf/location-map.git
+   cd location-map
    ```
-   REACT_APP_SPREADSHEET_ID=your_spreadsheet_id
-   REACT_APP_GOOGLE_API_KEY=your_api_key
-   ```
-   The spreadsheet ID can be found in the URL of your Google Sheet:
-   `https://docs.google.com/spreadsheets/d/[SPREADSHEET_ID]/edit`
 
-5. Share the Spreadsheet:
-   - Make sure the spreadsheet is accessible to anyone with the link (View access is sufficient)
-
-## Running the Application
-
-1. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the development server:
-   ```bash
-   npm start
+3. Create a `.env` file with your Mapbox API key:
+   ```
+   VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_api_key
    ```
 
-## Data Format
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-Ensure your Google Sheets data follows the same format as the previous CSV files:
+## Data Structure
 
-### provider_data Sheet
-- Provider Last Name
-- Provider First Name
-- NPI
-- pri_spec
-- gndr
-- adr_ln_1
+The Google Sheet must maintain the following structure:
+
+### Required Columns
+- FacilityName
+- FacilityType
+- StreetAddress
 - City
-- ZIP Code
-- longitude
-- latitude
-- county
+- State
+- Zip
+- Longitude(optional)
+- Latitude(optional)
+- Inpatient (true/false)
+- Outpatient (true/false)
+- Children (true/false)
+- Adults (true/false)
 
-### jail_data Sheet
-- Name
-- Address
-- City
-- Zip Code
-- X (longitude)
-- Y (latitude)
-- county
+### Important Notes
+- Column names must match exactly (case-sensitive)
+- Adding or removing columns will break the map functionality
+- Facility types are dynamically enumerated from Column A
+- Service types (inpatient, outpatient, children, adults) are hardcoded in the application
+- The spreadsheet must remain public with "Anyone with the link" view access
 
-### hospital_data Sheet
-- Facility_Name
-- Facility_Type
-- Address_Full
-- longitude
-- latitude
-- County
+## Updating the Map
 
-## Important Notes
+### Adding New Facilities
+1. Add a new row to the Google Sheet
+2. Fill in all required columns
+3. The geocoding script will automatically populate coordinates
+4. The map will update automatically on next load
 
-- Make sure all required environment variables are set before running the application
-- The Google Sheets API has quotas and rate limits. Monitor your usage in the Google Cloud Console
-- Keep your API key secure and never commit it to version control
+### Adding New Facility Types
+1. Add facilities with the new type to the sheet
+2. The type will be automatically added to the map's legend
+3. A new color will be assigned to the facility type
 
-## Development
+### Adding New Service Types
+1. Requires code changes in `src/App.jsx`
+2. Update the `serviceTypes` array in the `initLegend` function
+3. Add corresponding column in the Google Sheet
+4. Deploy the updated code
 
-This project uses:
-- React for the UI framework
-- Vite for the build tool and development server
-- Google Sheets API for data source
-- Mapbox for map visualization
+## Deployment
+
+The application is automatically deployed to GitHub Pages when changes are pushed to the main branch. The deployment process:
+
+1. Builds the application with Vite
+2. Outputs static files to the `dist` directory
+3. Deploys to the `gh-pages` branch
+4. Updates https://jisaf.github.io/location-map/
+
+## Technical Stack
+
+- React 18+ for UI components
+- Vite for build tooling and development
+- Mapbox GL JS for map rendering
+- Material-UI for interface components
+- GitHub Pages for hosting
+- Google Sheets as a data backend
