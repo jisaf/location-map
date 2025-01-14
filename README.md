@@ -2,6 +2,8 @@
 
 This application displays facility locations on a map, with data dynamically sourced from Google Sheets. Built with React + Vite and hosted on GitHub Pages.
 
+This was a proof of concept development project. Code is ugly and non-optimized.
+
 ## Live Demo
 The application is hosted at: https://jisaf.github.io/location-map/
 
@@ -23,7 +25,7 @@ The application pulls data from a [public Google Sheet](https://docs.google.com/
 - Facility information (name, type, address)
 - Geographic coordinates (latitude/longitude)
 - Available services (inpatient, outpatient, children, adults)
-- Regional classification
+- Regional classification (Large Metro, Metro, Rural CEAC, Micro)
 
 ### Geocoding
 The Google Sheet includes an Apps Script function that automatically calculates latitude/longitude coordinates from addresses. The script is available [here](https://script.google.com/u/0/home/projects/1JTY0qNM_JApgpkkCxITfBaXF3V11JADxo6Z5BmVLnHKIQ4Zv6NCk4_8F/edit).
@@ -33,7 +35,7 @@ The Google Sheet includes an Apps Script function that automatically calculates 
 1. Mapbox API Key:
    - Sign up for a free account at [Mapbox](https://www.mapbox.com/)
    - Create an API key
-   - Add it to your environment configuration
+   - Add it to your environment configuration as VITE_MAPBOX_ACCESS_TOKEN
 
 ## Development Setup
 
@@ -62,19 +64,19 @@ The Google Sheet includes an Apps Script function that automatically calculates 
 
 The Google Sheet must maintain the following structure:
 
-### Required Columns
-- FacilityName
-- FacilityType
-- StreetAddress
+### Required Column Headers
+- Facility Type
+- Facility Name
+- Street Address
 - City
 - State
 - Zip
-- Longitude(optional)
-- Latitude(optional)
-- Inpatient (true/false)
-- Outpatient (true/false)
-- Children (true/false)
-- Adults (true/false)
+- Latitude (optional)
+- Longitude (optional)
+- Inpatient
+- Outpatient
+- Children
+- Adults
 
 ### Important Notes
 - Column names must match exactly (case-sensitive)
@@ -88,13 +90,14 @@ The Google Sheet must maintain the following structure:
 ### Adding New Facilities
 1. Add a new row to the Google Sheet
 2. Fill in all required columns
-3. The geocoding script will automatically populate coordinates
+3. The geocoding script will automatically populate coordinates based on the address
 4. The map will update automatically on next load
 
 ### Adding New Facility Types
-1. Add facilities with the new type to the sheet
-2. The type will be automatically added to the map's legend
-3. A new color will be assigned to the facility type
+1. Update the Facility Type column in the spreadsheet with the additional facility type
+2. Add facilities with the new type to the sheet
+3. The type will be automatically added to the map's legend
+4. A new color will be assigned to the facility type
 
 ### Adding New Service Types
 1. Requires code changes in `src/App.jsx`
@@ -104,7 +107,7 @@ The Google Sheet must maintain the following structure:
 
 ## Deployment
 
-The application is automatically deployed to GitHub Pages when changes are pushed to the main branch. The deployment process:
+The application is automatically deploys to GitHub Pages using the `npm run deploy` command. The deployment process:
 
 1. Builds the application with Vite
 2. Outputs static files to the `dist` directory
