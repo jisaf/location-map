@@ -302,23 +302,24 @@ const ProviderLocationMapWithLegend = () => {
     return county ? county.properties.COUNTY : null;
   };
 
-  // Stable color palette for facility types
+  // Stable color palette for facility types - using darker, more saturated colors
+  // to contrast with the lighter, pastel region colors
   const facilityColorPalette = [
-    '#2E7D32', // Green
-    '#1565C0', // Blue
-    '#C62828', // Red
-    '#6A1B9A', // Purple
-    '#EF6C00', // Orange
-    '#2E7D7D', // Teal
-    '#283593', // Indigo
-    '#8E24AA', // Pink
-    '#558B2F', // Light Green
-    '#D84315', // Deep Orange
-    '#4527A0', // Deep Purple
-    '#00838F', // Cyan
-    '#4E342E', // Brown
-    '#37474F', // Blue Grey
-    '#FF8F00', // Amber
+    '#D32F2F', // Red
+    '#1976D2', // Blue
+    '#388E3C', // Green
+    '#7B1FA2', // Purple
+    '#F57C00', // Orange
+    '#0097A7', // Cyan
+    '#512DA8', // Deep Purple
+    '#C2185B', // Pink
+    '#FBC02D', // Yellow
+    '#455A64', // Blue Grey
+    '#2E7D32', // Dark Green
+    '#1565C0', // Dark Blue
+    '#6D4C41', // Brown
+    '#B71C1C', // Dark Red
+    '#004D40', // Dark Teal
   ];
 
   // Create a stable mapping of facility types to colors
@@ -326,13 +327,14 @@ const ProviderLocationMapWithLegend = () => {
 
   useEffect(() => {
     if (providerData.length > 0) {
+      console.log('Initializing facility colors with data:', providerData);
+      
       // Get unique facility types from the data
       const uniqueTypes = Array.from(new Set(providerData.map(item => item.facilityType)))
         .filter(type => type) // Remove null/undefined
         .sort(); // Sort alphabetically for stability
 
-      // Update the facility types state
-      setFacilityTypes(uniqueTypes);
+      console.log('Unique facility types:', uniqueTypes);
 
       // Create the mapping
       const colorMap = uniqueTypes.reduce((acc, type, index) => {
@@ -343,7 +345,9 @@ const ProviderLocationMapWithLegend = () => {
       // Add 'Other' as fallback
       colorMap['Other'] = '#6b7280';
       
+      console.log('Created color map:', colorMap);
       setFacilityColorMap(colorMap);
+      setFacilityTypes(uniqueTypes);
     }
   }, [providerData]);
 
@@ -429,12 +433,13 @@ const ProviderLocationMapWithLegend = () => {
   }, []);
 
   useEffect(() => {
-    if (mapLoaded && countyBoundaries && providerData.length > 0) {
+    if (mapLoaded && countyBoundaries && providerData.length > 0 && facilityColorMap) {
+      console.log('Map loaded and data ready, adding features');
       addCountyBoundaries();
       addProviderMarkers(providerData);
       addServiceAreaCircles(providerData);
     }
-  }, [mapLoaded, countyBoundaries, providerData]);
+  }, [mapLoaded, countyBoundaries, providerData, facilityColorMap, addProviderMarkers, addCountyBoundaries, addServiceAreaCircles]);
 
   const initMap = () => {
     console.log('Initializing map, current map ref:', map.current);
@@ -639,7 +644,12 @@ const ProviderLocationMapWithLegend = () => {
   const addProviderMarkers = useCallback((facilities) => {
     console.log('Adding provider markers with facilities:', facilities);
     console.log('Map reference:', map.current);
-    if (!map.current || !facilities) return;
+    console.log('Current color map:', facilityColorMap);
+    
+    if (!map.current || !facilities) {
+      console.log('Map or facilities not ready');
+      return;
+    }
 
     console.log('Clearing existing markers');
     Object.values(markers.current).forEach(markerArray => {
@@ -648,15 +658,17 @@ const ProviderLocationMapWithLegend = () => {
     markers.current = {};
 
     facilities.forEach((facility) => {
-      console.log('Processing facility for marker:', facility);
       if (facility.longitude && facility.latitude) {
-        console.log('Creating marker for facility:', facility.facilityName);
+        const color = getFacilityColor(facility.facilityType);
+        console.log(`Creating marker for ${facility.facilityName} (${facility.facilityType}) with color ${color}`);
+        
         const el = document.createElement('div');
         el.className = 'marker';
-        el.style.backgroundColor = getFacilityColor(facility.facilityType);
-        el.style.width = '8px';
-        el.style.height = '8px';
+        el.style.backgroundColor = color;
+        el.style.width = '10px';
+        el.style.height = '10px';
         el.style.borderRadius = '50%';
+        el.style.border = '1px solid rgba(0, 0, 0, 0.3)';
 
         const marker = new mapboxgl.Marker(el)
           .setLngLat([facility.longitude, facility.latitude])
@@ -669,16 +681,16 @@ const ProviderLocationMapWithLegend = () => {
             `)
           );
 
-        console.log('Marker created:', marker);
         if (!markers.current[facility.facilityType]) {
           markers.current[facility.facilityType] = [];
         }
         
         markers.current[facility.facilityType].push(marker);
         marker.addTo(map.current);
+        console.log('Marker added to map');
       }
     });
-  }, [getFacilityColor]);
+  }, [getFacilityColor, facilityColorMap]);
 
   const addServiceAreaCircles = useCallback((providers) => {
     if (!map.current || !providers) return;
