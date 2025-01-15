@@ -2,6 +2,42 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
 import { config } from './geographic-system-rules';
 import 'mapbox-gl/dist/mapbox-gl.css';
+
+const legendStyles = `
+  .large-metro-pattern {
+    background-image: linear-gradient(45deg, #000 25%, transparent 25%),
+                      linear-gradient(-45deg, #000 25%, transparent 25%),
+                      linear-gradient(transparent 50%, #000 50%);
+    background-size: 4px 4px;
+  }
+  
+  .metro-pattern {
+    background-image: linear-gradient(45deg, #000 25%, transparent 25%),
+                      linear-gradient(-45deg, #000 25%, transparent 25%);
+    background-size: 4px 4px;
+  }
+  
+  .micro-pattern {
+    background-image: linear-gradient(0deg, #000 1px, transparent 1px),
+                      linear-gradient(90deg, #000 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+  
+  .rural-pattern {
+    background-image: linear-gradient(0deg, #000 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+  
+  .ceac-pattern {
+    background-image: linear-gradient(45deg, #000 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.type = 'text/css';
+styleSheet.innerText = legendStyles;
+document.head.appendChild(styleSheet);
 // Using direct Google Sheets API instead of googleapis
 
 import { 
@@ -12,8 +48,99 @@ import {
   Tab, 
   Box,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  Grid,
+  Paper
 } from '@mui/material';
+
+const MapContainer = ({ mapRef }) => {
+  return (
+    <Box
+      ref={mapRef}
+      sx={{
+        width: '75%',
+        border: 1,
+        borderColor: 'grey.300',
+        borderRadius: 1,
+        overflow: 'hidden',
+        position: 'relative'
+      }}
+    >
+      <MapLegend />
+    </Box>
+  );
+};
+
+const MapLegend = () => {
+  const regionColors = [
+    { region: 'Region 1', color: '#87CEEB' },
+    { region: 'Region 2', color: '#90EE90' },
+    { region: 'Region 3', color: '#FFA500' },
+    { region: 'Region 4', color: '#FF6347' }
+  ];
+
+  const classificationPatterns = [
+    { name: 'Large Metro', pattern: 'large-metro-pattern' },
+    { name: 'Metro', pattern: 'metro-pattern' },
+    { name: 'Micro', pattern: 'micro-pattern' },
+    { name: 'Rural', pattern: 'rural-pattern' },
+    { name: 'CEAC', pattern: 'ceac-pattern' }
+  ];
+
+  return (
+    <Paper 
+      elevation={3} 
+      sx={{ 
+        position: 'absolute', 
+        bottom: 16, 
+        left: 16, 
+        padding: 2,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        zIndex: 1
+      }}
+    >
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <Typography variant="subtitle2" gutterBottom>BHASO Regions</Typography>
+          <Grid container spacing={1}>
+            {regionColors.map(({ region, color }) => (
+              <Grid item xs={3} key={region} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    backgroundColor: color,
+                    marginRight: 1
+                  }}
+                />
+                <Typography variant="caption">{region}</Typography>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+        <Grid item xs={12}>
+          <Typography variant="subtitle2" gutterBottom>County Classifications</Typography>
+          <Grid container spacing={1}>
+            {classificationPatterns.map(({ name, pattern }) => (
+              <Grid item xs={12} sm={2.4} key={name} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box
+                  className={pattern}
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    border: '1px solid #000',
+                    marginRight: 1
+                  }}
+                />
+                <Typography variant="caption">{name}</Typography>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+};
 
 const ProviderLocationMapWithLegend = () => {
   const [providerData, setProviderData] = useState([]);
@@ -601,16 +728,7 @@ const ProviderLocationMapWithLegend = () => {
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
         <Box sx={{ display: 'flex', height: '600px' }}>
-          <Box
-            ref={mapContainer}
-            sx={{ 
-              width: '75%', 
-              border: 1, 
-              borderColor: 'grey.300',
-              borderRadius: 1,
-              overflow: 'hidden'
-            }}
-          />
+          <MapContainer mapRef={mapContainer} />
           <Box sx={{ width: '25%', pl: 2 }}>
             <Tabs
               value={tabValue}
