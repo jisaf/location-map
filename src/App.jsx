@@ -57,7 +57,7 @@ import {
 } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-const MapContainer = ({ mapRef, facilityTypes, getFacilityColor }) => {
+const MapContainer = ({ mapRef }) => {
   const [showLegend, setShowLegend] = useState(false);
 
   return (
@@ -132,94 +132,12 @@ const MapContainer = ({ mapRef, facilityTypes, getFacilityColor }) => {
           </Button>
         )}
       </Box>
-      <FacilityLegend facilityTypes={facilityTypes} getFacilityColor={getFacilityColor} />
+
     </Box>
   );
 };
 
-const FacilityLegend = ({ facilityTypes, getFacilityColor }) => {
-  const [showLegend, setShowLegend] = useState(false);
 
-  return (
-    <Box
-      sx={{
-        position: 'absolute',
-        top: 16,
-        right: 16,
-        zIndex: 1,
-        display: 'flex',
-        alignItems: 'flex-start'
-      }}
-    >
-      <Collapse 
-        in={showLegend} 
-        orientation="horizontal"
-        timeout={300}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            position: 'relative',
-            padding: 2,
-            pr: 6
-          }}
-        >
-          <Typography variant="subtitle2" gutterBottom>Facility Types</Typography>
-          <Grid container spacing={1} direction="column">
-            {facilityTypes.map((type) => (
-              <Grid item key={type} sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    backgroundColor: getFacilityColor(type),
-                    marginRight: 1
-                  }}
-                />
-                <Typography variant="caption">{type}</Typography>
-              </Grid>
-            ))}
-          </Grid>
-          <IconButton
-            onClick={() => setShowLegend(!showLegend)}
-            sx={{
-              position: 'absolute',
-              top: 0,
-              right: -40,
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 1)'
-              },
-              transform: showLegend ? 'rotate(180deg)' : 'none',
-              transition: 'transform 0.3s ease-in-out'
-            }}
-          >
-            <ChevronRightIcon />
-          </IconButton>
-        </Paper>
-      </Collapse>
-      {!showLegend && (
-        <Button
-          onClick={() => setShowLegend(true)}
-          startIcon={<ChevronRightIcon />}
-          variant="contained"
-          size="small"
-          sx={{
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            color: 'black',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 1)'
-            },
-            textTransform: 'none'
-          }}
-        >
-          Facilities
-        </Button>
-      )}
-    </Box>
-  );
-};
 
 const MapLegend = () => {
   const regionColors = [
@@ -757,18 +675,10 @@ const ProviderLocationMapWithLegend = () => {
         }
         
         markers.current[facility.facilityType].push(marker);
-
-        console.log('Active specialties:', activeSpecialties);
-        console.log('Facility type:', facility.facilityType);
-        console.log('Should show marker:', activeSpecialties[facility.facilityType]);
-        
-        if (activeSpecialties[facility.facilityType]) {
-          console.log('Adding marker to map');
-          marker.addTo(map.current);
-        }
+        marker.addTo(map.current);
       }
     });
-  }, [activeSpecialties]);
+  }, [getFacilityColor]);
 
   const addServiceAreaCircles = useCallback((providers) => {
     if (!map.current || !providers) return;
@@ -906,11 +816,7 @@ const ProviderLocationMapWithLegend = () => {
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
         <Box sx={{ display: 'flex', height: '600px' }}>
-          <MapContainer 
-            mapRef={mapContainer}
-            facilityTypes={facilityTypes}
-            getFacilityColor={getFacilityColor}
-          />
+          <MapContainer mapRef={mapContainer} />
           <Box sx={{ width: '25%', pl: 2 }}>
             <Tabs
               value={tabValue}
