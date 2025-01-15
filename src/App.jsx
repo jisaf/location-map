@@ -246,22 +246,86 @@ const ProviderLocationMapWithLegend = () => {
         return acc;
       }, {});
 
+      const classificationLookup = config.counties.reduce((acc, county) => {
+        if (county && county.name) {
+          acc[county.name.toUpperCase()] = county.classification;
+        }
+        return acc;
+      }, {});
+
       const updatedGeoJSON = {
         ...countyBoundaries,
         features: countyBoundaries.features.map(feature => ({
           ...feature,
           properties: {
             ...feature.properties,
-            REGION: feature.properties?.COUNTY ? regionLookup[feature.properties.COUNTY] || 0 : 0
+            REGION: feature.properties?.COUNTY ? regionLookup[feature.properties.COUNTY] || 0 : 0,
+            CLASSIFICATION: feature.properties?.COUNTY ? classificationLookup[feature.properties.COUNTY] || 'Unknown' : 'Unknown'
           }
         }))
       };
+
+      // Add patterns
+      map.current.addImage('pattern-large-metro', {
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const x = i % 8;
+          const y = Math.floor(i / 8);
+          // Dense crosshatch (diagonal lines + horizontal line)
+          return (x === y || x === (7 - y) || y === 4) ? 255 : 0;
+        })
+      });
+
+      map.current.addImage('pattern-metro', {
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const x = i % 8;
+          const y = Math.floor(i / 8);
+          // Crosshatch (diagonal lines)
+          return (x === y || x === (7 - y)) ? 255 : 0;
+        })
+      });
+
+      map.current.addImage('pattern-micro', {
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const x = i % 8;
+          const y = Math.floor(i / 8);
+          // Grid (vertical and horizontal lines)
+          return (x % 4 === 0 || y % 4 === 0) ? 255 : 0;
+        })
+      });
+
+      map.current.addImage('pattern-rural', {
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const y = Math.floor(i / 8);
+          // Single horizontal line
+          return y === 4 ? 255 : 0;
+        })
+      });
+
+      map.current.addImage('pattern-ceac', {
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const x = i % 8;
+          const y = Math.floor(i / 8);
+          // Single diagonal line
+          return x === y ? 255 : 0;
+        })
+      });
 
       map.current.addSource('counties', {
         type: 'geojson',
         data: updatedGeoJSON
       });
 
+      // Add base fill layer for region colors
       map.current.addLayer({
         'id': 'county-fills',
         'type': 'fill',
@@ -276,7 +340,26 @@ const ProviderLocationMapWithLegend = () => {
             4, '#FF6347',
             '#ccc'
           ],
-          'fill-opacity': 0.5
+          'fill-opacity': 0.7
+        }
+      });
+
+      // Add pattern layer on top
+      map.current.addLayer({
+        'id': 'county-patterns',
+        'type': 'fill',
+        'source': 'counties',
+        'paint': {
+          'fill-pattern': [
+            'match',
+            ['get', 'CLASSIFICATION'],
+            'Large Metro', 'pattern-large-metro',
+            'Metro', 'pattern-metro',
+            'Micro', 'pattern-micro',
+            'Rural', 'pattern-rural',
+            'CEAC', 'pattern-ceac',
+            'pattern-rural' // default pattern
+          ]
         }
       });
 
