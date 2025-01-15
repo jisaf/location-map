@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
-import { config } from './geographic-system-rules';
 import 'mapbox-gl/dist/mapbox-gl.css';
-// Using direct Google Sheets API instead of googleapis
+import './styles/patterns';
 
 import { 
   Card, 
@@ -12,8 +11,11 @@ import {
   Tab, 
   Box,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
 } from '@mui/material';
+
+import MapContainer from './components/MapContainer';
+import { findCountyFromCoordinates, getServicesString, addCountyBoundaries } from './utils/mapUtils';
 
 const ProviderLocationMapWithLegend = () => {
   const [providerData, setProviderData] = useState([]);
@@ -23,110 +25,64 @@ const ProviderLocationMapWithLegend = () => {
   const [countyBoundaries, setCountyBoundaries] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tabValue, setTabValue] = useState(0);
+  const [facilityTypes, setFacilityTypes] = useState([]);
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef({});
   const serviceCircles = useRef({});
 
+  // Stable color palette for facility types - using darker, more saturated colors
+  // to contrast with the lighter, pastel region colors
+  const facilityColorPalette = [
+    '#D32F2F', // Red
+    '#1976D2', // Blue
+    '#388E3C', // Green
+    '#7B1FA2', // Purple
+    '#F57C00', // Orange
+    '#0097A7', // Cyan
+    '#512DA8', // Deep Purple
+    '#C2185B', // Pink
+    '#FBC02D', // Yellow
+    '#455A64', // Blue Grey
+    '#2E7D32', // Dark Green
+    '#1565C0', // Dark Blue
+    '#6D4C41', // Brown
+    '#B71C1C', // Dark Red
+    '#004D40', // Dark Teal
+  ];
 
-  const fetchData = async () => {
-    try {
-      const response = await fetch(
-        'https://docs.google.com/spreadsheets/d/151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k/gviz/tq?gid=804300694'
-      );
+  // Create a stable mapping of facility types to colors
+  const [facilityColorMap, setFacilityColorMap] = useState({});
+
+  useEffect(() => {
+    if (providerData.length > 0) {
+      console.log('Initializing facility colors with data:', providerData);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      // Get unique facility types from the data
+      const uniqueTypes = Array.from(new Set(providerData.map(item => item.facilityType)))
+        .filter(type => type) // Remove null/undefined
+        .sort(); // Sort alphabetically for stability
+
+      console.log('Unique facility types:', uniqueTypes);
+
+      // Create the mapping
+      const colorMap = uniqueTypes.reduce((acc, type, index) => {
+        acc[type] = facilityColorPalette[index % facilityColorPalette.length];
+        return acc;
+      }, {});
+
+      // Add 'Other' as fallback
+      colorMap['Other'] = '#6b7280';
       
-      const text = await response.text();
-      // Extract the JSON part from the response (it's wrapped in a callback)
-      const jsonText = text.match(/google\.visualization\.Query\.setResponse\((.*)\);/)?.[1];
-      if (!jsonText) {
-        throw new Error('Invalid response format');
-      }
-      console.log(jsonText)
-      const jsonData = JSON.parse(jsonText);
-      console.log('Parsed JSON data:', jsonData);
-      const table = jsonData.table;
-      const headers = table.cols.map(col => col.label.trim());
-      console.log('Headers:', headers);
-      
-      const data = table.rows
-        .map(row => {
-          const item = {};
-          row.c.forEach((cell, index) => {
-            const header = headers[index].replace(/\s+/g, '');
-            if (header === 'Longitude' || header === 'Latitude') {
-              // Parse coordinates as numbers
-              item[header] = cell?.v ? Number(cell.v) : null;
-            } else {
-              item[header] = cell?.v ?? null;
-            }
-          });
-          return item;
-        })
-        .filter(item => item.FacilityName !== null); // Drop rows with null Facility Name
-      
-      console.log('Processed data:', data);
-      return data;
-    } catch (error) {
-      console.error('Error fetching data from Google Sheets:', error);
-      return [];
+      console.log('Created color map:', colorMap);
+      setFacilityColorMap(colorMap);
+      setFacilityTypes(uniqueTypes);
     }
-  };
+  }, [providerData]);
 
-  const findCountyFromCoordinates = (longitude, latitude, countyBoundaries) => {
-    if (!countyBoundaries || !countyBoundaries.features) return null;
-
-    // Function to check if a point is inside a polygon
-    const pointInPolygon = (point, polygon) => {
-      // Handle MultiPolygon
-      if (polygon.type === 'MultiPolygon') {
-        return polygon.coordinates.some(coords => 
-          pointInSinglePolygon(point, coords[0])
-        );
-      }
-      // Handle single Polygon
-      return pointInSinglePolygon(point, polygon.coordinates[0]);
-    };
-
-    // Ray casting algorithm for point in polygon
-    const pointInSinglePolygon = (point, polygon) => {
-      let inside = false;
-      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const xi = polygon[i][0], yi = polygon[i][1];
-        const xj = polygon[j][0], yj = polygon[j][1];
-        
-        const intersect = ((yi > point[1]) !== (yj > point[1])) &&
-          (point[0] < (xj - xi) * (point[1] - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
-      }
-      return inside;
-    };
-
-    const point = [longitude, latitude];
-    
-    // Find the county that contains this point
-    const county = countyBoundaries.features.find(feature => {
-      const geometry = feature.geometry;
-      return pointInPolygon(point, geometry);
-    });
-
-    return county ? county.properties.COUNTY : null;
-  };
-
-  const getFacilityColor = (facilityType) => {
-    const colorMap = {
-      'Hospital': '#ef4444',
-      'Community Clinic': '#22c55e',
-      'Mental Health Center': '#3b82f6',
-      'Crisis Center': '#f59e0b',
-      'Substance Use Disorder': '#8b5cf6',
-      'Other': '#6b7280'
-    };
-    return colorMap[facilityType] || colorMap['Other'];
-  };
+  const getFacilityColor = useCallback((facilityType) => {
+    return facilityColorMap[facilityType] || facilityColorMap['Other'];
+  }, [facilityColorMap]);
 
   const getServicesString = (services) => {
     const serviceTypes = ['inpatient', 'outpatient', 'children', 'adults'];
@@ -138,285 +94,15 @@ const ProviderLocationMapWithLegend = () => {
     }).join('');
   };
 
-  const flattenData = (data) => {
-    if (!Array.isArray(data)) {
-      console.error('Expected array of data but got:', typeof data);
-      return [];
-    }
-
-    return data.map(item => {
-      console.log(item)
-      // Coordinates should already be numbers from fetchData
-      const longitude = item['Longitude(optional)'];
-      const latitude = item['Latitude(optional)'];
-      console.log('Using coordinates:', { longitude, latitude });
-      
-      // Get county from coordinates if available
-      let county = '';
-      if (longitude && latitude && countyBoundaries) {
-        county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
-        if (county) {
-          console.log(`Found county from coordinates for ${item['FacilityName']}: ${county}`);
-        }
-      }
-      console.log('Processing item:', item);
-      return {
-        facilityName: item['FacilityName'],
-        facilityType: item['FacilityType'],
-        address: `${item['StreetAddress']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
-        longitude,
-        latitude,
-        county,
-        services: {
-          inpatient: String(item['Inpatient']).toLowerCase() === 'true' || item['Inpatient'] === true,
-          outpatient: String(item['Outpatient']).toLowerCase() === 'true' || item['Outpatient'] === true,
-          children: String(item['Children']).toLowerCase() === 'true' || item['Children'] === true,
-          adults: String(item['Adults']).toLowerCase() === 'true' || item['Adults'] === true
-        }
-      };
-    });
-  };
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Fetch county boundaries first
-        const geoJsonResponse = await fetch('./Colorado_County_Boundaries.geojson');
-        if (!geoJsonResponse.ok) {
-          throw new Error(`HTTP error! status: ${geoJsonResponse.status}`);
-        }
-        const geoJsonData = await geoJsonResponse.json();
-        setCountyBoundaries(geoJsonData);
-
-        // Get provider data
-        const data = await fetchData();
-        console.log('Raw data from fetchData:', data);
-        const enrichedData = flattenData(data);
-        console.log('Enriched data:', enrichedData);
-        
-        setProviderData(enrichedData);
-        initMap();
-        initLegend(enrichedData);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (mapLoaded && countyBoundaries && providerData.length > 0) {
-      addCountyBoundaries();
-      addProviderMarkers(providerData);
-      addServiceAreaCircles(providerData);
-    }
-  }, [mapLoaded, countyBoundaries, providerData]);
-
-  const initMap = () => {
-    console.log('Initializing map, current map ref:', map.current);
-    if (map.current) return;
-
-    try {
-      console.log('Creating new map instance');
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v10',
-        center: [-105.2705, 40.0150],
-        zoom: 6
-      });
-
-      map.current.on('load', () => {
-        console.log('Map loaded successfully');
-        setMapLoaded(true);
-      });
-    } catch (error) {
-      console.error('Error initializing map:', error);
-    }
-  };
-
-  const addCountyBoundaries = () => {
-    if (!map.current || !countyBoundaries) return;
-
-    if (!map.current.getSource('counties')) {
-      const regionLookup = config.counties.reduce((acc, county) => {
-        if (county && county.name) {
-          acc[county.name.toUpperCase()] = county.region;
-        }
-        return acc;
-      }, {});
-
-      const classificationLookup = config.counties.reduce((acc, county) => {
-        if (county && county.name) {
-          acc[county.name.toUpperCase()] = county.classification;
-        }
-        return acc;
-      }, {});
-
-      const updatedGeoJSON = {
-        ...countyBoundaries,
-        features: countyBoundaries.features.map(feature => ({
-          ...feature,
-          properties: {
-            ...feature.properties,
-            REGION: feature.properties?.COUNTY ? regionLookup[feature.properties.COUNTY] || 0 : 0,
-            CLASSIFICATION: feature.properties?.COUNTY ? classificationLookup[feature.properties.COUNTY] || 'Unknown' : 'Unknown'
-          }
-        }))
-      };
-
-      // Add patterns
-      map.current.addImage('pattern-large-metro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Dense crosshatch (diagonal lines + horizontal line)
-          return (x === y || x === (7 - y) || y === 4) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-metro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Crosshatch (diagonal lines)
-          return (x === y || x === (7 - y)) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-micro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Grid (vertical and horizontal lines)
-          return (x % 4 === 0 || y % 4 === 0) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-rural', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const y = Math.floor(i / 8);
-          // Single horizontal line
-          return y === 4 ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-ceac', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Single diagonal line
-          return x === y ? 255 : 0;
-        })
-      });
-
-      map.current.addSource('counties', {
-        type: 'geojson',
-        data: updatedGeoJSON
-      });
-
-      // Add base fill layer for region colors
-      map.current.addLayer({
-        'id': 'county-fills',
-        'type': 'fill',
-        'source': 'counties',
-        'paint': {
-          'fill-color': [
-            'match',
-            ['get', 'REGION'],
-            1, '#87CEEB',
-            2, '#90EE90',
-            3, '#FFA500',
-            4, '#FF6347',
-            '#ccc'
-          ],
-          'fill-opacity': 0.7
-        }
-      });
-
-      // Add pattern layer on top
-      map.current.addLayer({
-        'id': 'county-patterns',
-        'type': 'fill',
-        'source': 'counties',
-        'paint': {
-          'fill-pattern': [
-            'match',
-            ['get', 'CLASSIFICATION'],
-            'Large Metro', 'pattern-large-metro',
-            'Metro', 'pattern-metro',
-            'Micro', 'pattern-micro',
-            'Rural', 'pattern-rural',
-            'CEAC', 'pattern-ceac',
-            'pattern-rural' // default pattern
-          ]
-        }
-      });
-
-      map.current.addLayer({
-        'id': 'county-borders',
-        'type': 'line',
-        'source': 'counties',
-        'paint': {
-          'line-color': '#000',
-          'line-width': 1
-        }
-      });
-
-      map.current.addLayer({
-        'id': 'county-labels',
-        'type': 'symbol',
-        'source': 'counties',
-        'layout': {
-          'text-field': ['get', 'COUNTY'],
-          'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-          'text-size': 12,
-          'text-transform': 'uppercase',
-          'text-offset': [0, 0.6],
-          'text-anchor': 'top'
-        },
-        'paint': {
-          'text-color': '#333',
-          'text-halo-color': '#fff',
-          'text-halo-width': 2
-        }
-      });
-
-      map.current.on('click', 'county-fills', (e) => {
-        if (e.features?.length > 0) {
-          const feature = e.features[0];
-          const countyName = feature.properties?.COUNTY;
-          const countyData = countyName && config.counties.find(county => 
-            county?.name?.toUpperCase() === countyName
-          );
-          
-          new mapboxgl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <h3>${countyName || 'Unknown County'}</h3>
-              <p>Classification: ${countyData?.classification || 'N/A'}</p>
-              <p>BHASO Region: ${feature.properties?.REGION || 'N/A'}</p>
-            `)
-            .addTo(map.current);
-        }
-      });
-    }
-  };
-
   const addProviderMarkers = useCallback((facilities) => {
     console.log('Adding provider markers with facilities:', facilities);
     console.log('Map reference:', map.current);
-    if (!map.current || !facilities) return;
+    console.log('Current color map:', facilityColorMap);
+    
+    if (!map.current || !facilities) {
+      console.log('Map or facilities not ready');
+      return;
+    }
 
     console.log('Clearing existing markers');
     Object.values(markers.current).forEach(markerArray => {
@@ -425,15 +111,17 @@ const ProviderLocationMapWithLegend = () => {
     markers.current = {};
 
     facilities.forEach((facility) => {
-      console.log('Processing facility for marker:', facility);
       if (facility.longitude && facility.latitude) {
-        console.log('Creating marker for facility:', facility.facilityName);
+        const color = getFacilityColor(facility.facilityType);
+        console.log(`Creating marker for ${facility.facilityName} (${facility.facilityType}) with color ${color}`);
+        
         const el = document.createElement('div');
         el.className = 'marker';
-        el.style.backgroundColor = getFacilityColor(facility.facilityType);
-        el.style.width = '8px';
-        el.style.height = '8px';
+        el.style.backgroundColor = color;
+        el.style.width = '10px';
+        el.style.height = '10px';
         el.style.borderRadius = '50%';
+        el.style.border = '1px solid rgba(0, 0, 0, 0.3)';
 
         const marker = new mapboxgl.Marker(el)
           .setLngLat([facility.longitude, facility.latitude])
@@ -446,24 +134,16 @@ const ProviderLocationMapWithLegend = () => {
             `)
           );
 
-        console.log('Marker created:', marker);
         if (!markers.current[facility.facilityType]) {
           markers.current[facility.facilityType] = [];
         }
         
         markers.current[facility.facilityType].push(marker);
-
-        console.log('Active specialties:', activeSpecialties);
-        console.log('Facility type:', facility.facilityType);
-        console.log('Should show marker:', activeSpecialties[facility.facilityType]);
-        
-        if (activeSpecialties[facility.facilityType]) {
-          console.log('Adding marker to map');
-          marker.addTo(map.current);
-        }
+        marker.addTo(map.current);
+        console.log('Marker added to map');
       }
     });
-  }, [activeSpecialties]);
+  }, [getFacilityColor, facilityColorMap]);
 
   const addServiceAreaCircles = useCallback((providers) => {
     if (!map.current || !providers) return;
@@ -515,84 +195,171 @@ const ProviderLocationMapWithLegend = () => {
     });
   }, [activeServiceTypes]);
 
-  const initLegend = (data) => {
-    console.log('Initializing legend with data:', data);
-    const uniqueFacilityTypes = Array.from(new Set(data.map(item => item.facilityType).filter(Boolean)));
-    console.log('Unique facility types:', uniqueFacilityTypes);
-    
-    const specialties = uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {});
-    console.log('Setting active specialties:', specialties);
-    setActiveSpecialties(specialties);
-
-    // Initialize service types based on available services - all checked by default
-    const serviceTypes = ['Inpatient', 'Outpatient', 'Children', 'Adults'];
-    setActiveServiceTypes(
-      serviceTypes.reduce((acc, service) => ({ ...acc, [service]: true }), {})
-    );
-
-    const uniqueRegions = Array.from(
-      new Set(config.counties.map(county => county?.region).filter(Boolean))
-    );
-    setActiveRegions(
-      uniqueRegions.reduce((acc, region) => ({ ...acc, [region.toString()]: true }), {})
-    );
+  const fetchData = async () => {
+    try {
+      const response = await fetch(
+        'https://docs.google.com/spreadsheets/d/151zw22uDrD36sucJQEXKrviECu-rxsXGoTb8gy4xn5k/gviz/tq?gid=804300694'
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      const jsonText = text.match(/google\.visualization\.Query\.setResponse\((.*)\);/)?.[1];
+      if (!jsonText) {
+        throw new Error('Invalid response format');
+      }
+      
+      const jsonData = JSON.parse(jsonText);
+      const table = jsonData.table;
+      const headers = table.cols.map(col => col.label.trim());
+      
+      const data = table.rows
+        .map(row => {
+          const item = {};
+          row.c.forEach((cell, index) => {
+            const header = headers[index].replace(/\s+/g, '');
+            if (header === 'Longitude' || header === 'Latitude') {
+              item[header] = cell?.v ? Number(cell.v) : null;
+            } else {
+              item[header] = cell?.v ?? null;
+            }
+          });
+          return item;
+        })
+        .filter(item => item.FacilityName !== null);
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching data from Google Sheets:', error);
+      return [];
+    }
   };
 
-  const toggleSpecialty = useCallback((specialty) => {
-    setActiveSpecialties(prev => {
-      const newState = { ...prev, [specialty]: !prev[specialty] };
-      
-      const specMarkers = markers.current[specialty] || [];
-      specMarkers.forEach(marker => {
-        if (newState[specialty]) {
-          marker.addTo(map.current);
-        } else {
-          marker.remove();
-        }
-      });
-      
-      return newState;
+  const findCountyFromCoordinates = (longitude, latitude, countyBoundaries) => {
+    if (!countyBoundaries || !countyBoundaries.features) return null;
+
+    const pointInPolygon = (point, polygon) => {
+      if (polygon.type === 'MultiPolygon') {
+        return polygon.coordinates.some(coords => 
+          pointInSinglePolygon(point, coords[0])
+        );
+      }
+      return pointInSinglePolygon(point, polygon.coordinates[0]);
+    };
+
+    const pointInSinglePolygon = (point, polygon) => {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i][0], yi = polygon[i][1];
+        const xj = polygon[j][0], yj = polygon[j][1];
+        
+        const intersect = ((yi > point[1]) !== (yj > point[1])) &&
+          (point[0] < (xj - xi) * (point[1] - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+
+    const point = [longitude, latitude];
+    
+    const county = countyBoundaries.features.find(feature => {
+      const geometry = feature.geometry;
+      return pointInPolygon(point, geometry);
     });
+
+    return county ? county.properties.COUNTY : null;
+  };
+
+  const flattenData = (data) => {
+    if (!Array.isArray(data)) {
+      console.error('Expected array of data but got:', typeof data);
+      return [];
+    }
+
+    return data.map(item => {
+      const longitude = item['Longitude(optional)'];
+      const latitude = item['Latitude(optional)'];
+      
+      let county = '';
+      if (longitude && latitude && countyBoundaries) {
+        county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
+      }
+      
+      return {
+        facilityName: item['FacilityName'],
+        facilityType: item['FacilityType'],
+        address: `${item['StreetAddress']}, ${item['City']}, ${item['State']} ${item['Zip']}`,
+        longitude,
+        latitude,
+        county,
+        services: {
+          inpatient: String(item['Inpatient']).toLowerCase() === 'true' || item['Inpatient'] === true,
+          outpatient: String(item['Outpatient']).toLowerCase() === 'true' || item['Outpatient'] === true,
+          children: String(item['Children']).toLowerCase() === 'true' || item['Children'] === true,
+          adults: String(item['Adults']).toLowerCase() === 'true' || item['Adults'] === true
+        }
+      };
+    });
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const geoJsonResponse = await fetch('./Colorado_County_Boundaries.geojson');
+        if (!geoJsonResponse.ok) {
+          throw new Error(`HTTP error! status: ${geoJsonResponse.status}`);
+        }
+        const geoJsonData = await geoJsonResponse.json();
+        setCountyBoundaries(geoJsonData);
+
+        const data = await fetchData();
+        const enrichedData = flattenData(data);
+        
+        setProviderData(enrichedData);
+        initMap();
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+
+    loadData();
   }, []);
 
-  const toggleServiceType = useCallback((serviceType) => {
-    setActiveServiceTypes(prev => {
-      const newState = { ...prev, [serviceType]: !prev[serviceType] };
-      
-      // Get all active service types after the toggle
-      const activeTypes = Object.entries(newState)
-        .filter(([_, isActive]) => isActive)
-        .map(([type]) => type.toLowerCase());
-      
-      // Show markers for facilities that offer any of the active services
-      Object.entries(markers.current).forEach(([facilityType, facilityMarkers]) => {
-        facilityMarkers.forEach(marker => {
-          // Find facility by coordinates since they're unique
-          const coords = marker.getLngLat();
-          const facility = providerData.find(f => 
-            f.longitude === coords.lng && f.latitude === coords.lat
-          );
-          
-          if (!facility) {
-            console.warn('Could not find facility for marker at', coords);
-            return;
-          }
-          
-          // Show marker if facility offers any of the active services
-          const shouldShow = activeTypes.length === 0 || // Show all if no services selected
-            activeTypes.some(type => facility.services[type]);
-          
-          if (shouldShow && activeSpecialties[facilityType]) {
-            marker.addTo(map.current);
-          } else {
-            marker.remove();
-          }
-        });
+  useEffect(() => {
+    if (mapLoaded && countyBoundaries && providerData.length > 0 && facilityColorMap) {
+      console.log('Map loaded and data ready, adding features');
+      addCountyBoundariesCallback();
+      addProviderMarkers(providerData);
+      addServiceAreaCircles(providerData);
+    }
+  }, [mapLoaded, countyBoundaries, providerData, facilityColorMap, addProviderMarkers, addCountyBoundariesCallback, addServiceAreaCircles]);
+
+  const initMap = () => {
+    if (map.current) return;
+
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/light-v10',
+        center: [-105.2705, 40.0150],
+        zoom: 6
       });
-      
-      return newState;
-    });
-  }, [providerData, activeSpecialties]);
+
+      map.current.on('load', () => {
+        setMapLoaded(true);
+      });
+    } catch (error) {
+      console.error('Error initializing map:', error);
+    }
+  };
+
+  const addCountyBoundariesCallback = useCallback(() => {
+    if (map.current && countyBoundaries) {
+      addCountyBoundaries(map.current, countyBoundaries);
+    }
+  }, [countyBoundaries]);
 
   return (
     <Card>
@@ -601,89 +368,72 @@ const ProviderLocationMapWithLegend = () => {
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
         <Box sx={{ display: 'flex', height: '600px' }}>
-          <Box
-            ref={mapContainer}
-            sx={{ 
-              width: '75%', 
-              border: 1, 
-              borderColor: 'grey.300',
-              borderRadius: 1,
-              overflow: 'hidden'
-            }}
-          />
+          <MapContainer mapRef={mapContainer} />
           <Box sx={{ width: '25%', pl: 2 }}>
             <Tabs
               value={tabValue}
               onChange={(e, newValue) => setTabValue(newValue)}
-              sx={{ borderBottom: 1, borderColor: 'divider' }}
+              aria-label="map controls"
             >
-              <Tab label="Facilities" />
-              <Tab label="Services" />
+              <Tab label="Filters" />
+              <Tab label="Legend" />
             </Tabs>
-            
             <Box sx={{ mt: 2 }}>
               {tabValue === 0 && (
                 <Box>
-                  {Object.entries(activeSpecialties).map(([specialty, isActive]) => (
-                    <Box key={specialty} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={isActive}
-                            onChange={() => toggleSpecialty(specialty)}
-                            size="small"
-                          />
-                        }
-                        label={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                mr: 1,
-                                bgcolor: getFacilityColor(specialty)
-                              }}
-                            />
-                            <Typography variant="body2">{specialty}</Typography>
-                          </Box>
-                        }
-                      />
-                    </Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Facility Types
+                  </Typography>
+                  {Object.keys(activeSpecialties).map((specialty) => (
+                    <FormControlLabel
+                      key={specialty}
+                      control={
+                        <Checkbox
+                          checked={activeSpecialties[specialty]}
+                          onChange={() => toggleSpecialty(specialty)}
+                        />
+                      }
+                      label={specialty}
+                    />
+                  ))}
+                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                    Service Types
+                  </Typography>
+                  {Object.keys(activeServiceTypes).map((service) => (
+                    <FormControlLabel
+                      key={service}
+                      control={
+                        <Checkbox
+                          checked={activeServiceTypes[service]}
+                          onChange={() => toggleServiceType(service)}
+                        />
+                      }
+                      label={service}
+                    />
+                  ))}
+                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                    Regions
+                  </Typography>
+                  {Object.keys(activeRegions).map((region) => (
+                    <FormControlLabel
+                      key={region}
+                      control={
+                        <Checkbox
+                          checked={activeRegions[region]}
+                          onChange={() => toggleRegion(region)}
+                        />
+                      }
+                      label={`Region ${region}`}
+                    />
                   ))}
                 </Box>
               )}
-              
               {tabValue === 1 && (
                 <Box>
-                  {Object.entries(activeServiceTypes).map(([type, isActive]) => (
-                    <Box key={type} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={isActive}
-                            onChange={() => toggleServiceType(type)}
-                            size="small"
-                          />
-                        }
-                        label={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                mr: 1,
-                                bgcolor: 'primary.main',
-                                opacity: 0.2
-                              }}
-                            />
-                            <Typography variant="body2">{type}</Typography>
-                          </Box>
-                        }
-                      />
-                    </Box>
-                  ))}
+                  <Typography variant="subtitle2" gutterBottom>
+                    Map Legend
+                  </Typography>
+                  {/* Add legend content here */}
                 </Box>
               )}
             </Box>
