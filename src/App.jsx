@@ -267,54 +267,54 @@ const ProviderLocationMapWithLegend = () => {
 
       // Add patterns
       map.current.addImage('pattern-large-metro', {
-        width: 10,
-        height: 10,
-        data: new Uint8Array(400).map((_, i) => {
-          const x = i % 10;
-          const y = Math.floor(i / 10);
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const x = i % 8;
+          const y = Math.floor(i / 8);
           // Dense crosshatch (diagonal lines + horizontal line)
-          return (x === y || x === (9 - y) || y === 5) ? 255 : 0;
+          return (x === y || x === (7 - y) || y === 4) ? 255 : 0;
         })
       });
 
       map.current.addImage('pattern-metro', {
-        width: 10,
-        height: 10,
-        data: new Uint8Array(400).map((_, i) => {
-          const x = i % 10;
-          const y = Math.floor(i / 10);
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const x = i % 8;
+          const y = Math.floor(i / 8);
           // Crosshatch (diagonal lines)
-          return (x === y || x === (9 - y)) ? 255 : 0;
+          return (x === y || x === (7 - y)) ? 255 : 0;
         })
       });
 
       map.current.addImage('pattern-micro', {
-        width: 10,
-        height: 10,
-        data: new Uint8Array(400).map((_, i) => {
-          const x = i % 10;
-          const y = Math.floor(i / 10);
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const x = i % 8;
+          const y = Math.floor(i / 8);
           // Grid (vertical and horizontal lines)
-          return (x === 0 || y === 0) ? 255 : 0;
+          return (x % 4 === 0 || y % 4 === 0) ? 255 : 0;
         })
       });
 
       map.current.addImage('pattern-rural', {
-        width: 10,
-        height: 10,
-        data: new Uint8Array(400).map((_, i) => {
-          const y = Math.floor(i / 10);
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const y = Math.floor(i / 8);
           // Single horizontal line
-          return y === 5 ? 255 : 0;
+          return y === 4 ? 255 : 0;
         })
       });
 
       map.current.addImage('pattern-ceac', {
-        width: 10,
-        height: 10,
-        data: new Uint8Array(400).map((_, i) => {
-          const x = i % 10;
-          const y = Math.floor(i / 10);
+        width: 8,
+        height: 8,
+        data: new Uint8Array(256).map((_, i) => {
+          const x = i % 8;
+          const y = Math.floor(i / 8);
           // Single diagonal line
           return x === y ? 255 : 0;
         })
@@ -325,8 +325,28 @@ const ProviderLocationMapWithLegend = () => {
         data: updatedGeoJSON
       });
 
+      // Add base fill layer for region colors
       map.current.addLayer({
         'id': 'county-fills',
+        'type': 'fill',
+        'source': 'counties',
+        'paint': {
+          'fill-color': [
+            'match',
+            ['get', 'REGION'],
+            1, '#87CEEB',
+            2, '#90EE90',
+            3, '#FFA500',
+            4, '#FF6347',
+            '#ccc'
+          ],
+          'fill-opacity': 0.7
+        }
+      });
+
+      // Add pattern layer on top
+      map.current.addLayer({
+        'id': 'county-patterns',
         'type': 'fill',
         'source': 'counties',
         'paint': {
@@ -339,17 +359,7 @@ const ProviderLocationMapWithLegend = () => {
             'Rural', 'pattern-rural',
             'CEAC', 'pattern-ceac',
             'pattern-rural' // default pattern
-          ],
-          'fill-color': [
-            'match',
-            ['get', 'REGION'],
-            1, '#87CEEB',
-            2, '#90EE90',
-            3, '#FFA500',
-            4, '#FF6347',
-            '#ccc'
-          ],
-          'fill-opacity': 0.5
+          ]
         }
       });
 
