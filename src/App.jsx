@@ -50,10 +50,15 @@ import {
   Checkbox,
   FormControlLabel,
   Grid,
-  Paper
+  Paper,
+  IconButton,
+  Collapse
 } from '@mui/material';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 const MapContainer = ({ mapRef }) => {
+  const [showLegend, setShowLegend] = useState(true);
+
   return (
     <Box
       ref={mapRef}
@@ -66,7 +71,35 @@ const MapContainer = ({ mapRef }) => {
         position: 'relative'
       }}
     >
-      <MapLegend />
+      <IconButton
+        onClick={() => setShowLegend(!showLegend)}
+        sx={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 1)'
+          },
+          zIndex: 1,
+          transform: showLegend ? 'none' : 'rotate(180deg)',
+          transition: 'transform 0.3s ease-in-out'
+        }}
+      >
+        <ChevronRightIcon />
+      </IconButton>
+      <Collapse 
+        in={showLegend} 
+        timeout={300}
+        sx={{
+          position: 'absolute',
+          bottom: 16,
+          left: 16,
+          zIndex: 1
+        }}
+      >
+        <MapLegend />
+      </Collapse>
     </Box>
   );
 };
@@ -91,12 +124,8 @@ const MapLegend = () => {
     <Paper 
       elevation={3} 
       sx={{ 
-        position: 'absolute', 
-        bottom: 16, 
-        left: 16, 
         padding: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        zIndex: 1
+        backgroundColor: 'rgba(255, 255, 255, 0.9)'
       }}
     >
       <Grid container spacing={2}>
