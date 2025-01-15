@@ -57,7 +57,7 @@ import {
 } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-const MapContainer = ({ mapRef }) => {
+const MapContainer = ({ mapRef, facilityTypes, getFacilityColor }) => {
   const [showLegend, setShowLegend] = useState(false);
 
   return (
@@ -132,6 +132,91 @@ const MapContainer = ({ mapRef }) => {
           </Button>
         )}
       </Box>
+      <FacilityLegend facilityTypes={facilityTypes} getFacilityColor={getFacilityColor} />
+    </Box>
+  );
+};
+
+const FacilityLegend = ({ facilityTypes, getFacilityColor }) => {
+  const [showLegend, setShowLegend] = useState(false);
+
+  return (
+    <Box
+      sx={{
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 1,
+        display: 'flex',
+        alignItems: 'flex-start'
+      }}
+    >
+      <Collapse 
+        in={showLegend} 
+        orientation="horizontal"
+        timeout={300}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            position: 'relative',
+            padding: 2,
+            pr: 6
+          }}
+        >
+          <Typography variant="subtitle2" gutterBottom>Facility Types</Typography>
+          <Grid container spacing={1} direction="column">
+            {facilityTypes.map((type) => (
+              <Grid item key={type} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    backgroundColor: getFacilityColor(type),
+                    marginRight: 1
+                  }}
+                />
+                <Typography variant="caption">{type}</Typography>
+              </Grid>
+            ))}
+          </Grid>
+          <IconButton
+            onClick={() => setShowLegend(!showLegend)}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              right: -40,
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 1)'
+              },
+              transform: showLegend ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.3s ease-in-out'
+            }}
+          >
+            <ChevronRightIcon />
+          </IconButton>
+        </Paper>
+      </Collapse>
+      {!showLegend && (
+        <Button
+          onClick={() => setShowLegend(true)}
+          startIcon={<ChevronRightIcon />}
+          variant="contained"
+          size="small"
+          sx={{
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            color: 'black',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 1)'
+            },
+            textTransform: 'none'
+          }}
+        >
+          Facilities
+        </Button>
+      )}
     </Box>
   );
 };
@@ -205,6 +290,7 @@ const ProviderLocationMapWithLegend = () => {
   const [countyBoundaries, setCountyBoundaries] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tabValue, setTabValue] = useState(0);
+  const [facilityTypes, setFacilityTypes] = useState([]);
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef({});
@@ -298,17 +384,54 @@ const ProviderLocationMapWithLegend = () => {
     return county ? county.properties.COUNTY : null;
   };
 
-  const getFacilityColor = (facilityType) => {
-    const colorMap = {
-      'Hospital': '#ef4444',
-      'Community Clinic': '#22c55e',
-      'Mental Health Center': '#3b82f6',
-      'Crisis Center': '#f59e0b',
-      'Substance Use Disorder': '#8b5cf6',
-      'Other': '#6b7280'
-    };
-    return colorMap[facilityType] || colorMap['Other'];
-  };
+  // Stable color palette for facility types
+  const facilityColorPalette = [
+    '#2E7D32', // Green
+    '#1565C0', // Blue
+    '#C62828', // Red
+    '#6A1B9A', // Purple
+    '#EF6C00', // Orange
+    '#2E7D7D', // Teal
+    '#283593', // Indigo
+    '#8E24AA', // Pink
+    '#558B2F', // Light Green
+    '#D84315', // Deep Orange
+    '#4527A0', // Deep Purple
+    '#00838F', // Cyan
+    '#4E342E', // Brown
+    '#37474F', // Blue Grey
+    '#FF8F00', // Amber
+  ];
+
+  // Create a stable mapping of facility types to colors
+  const [facilityColorMap, setFacilityColorMap] = useState({});
+
+  useEffect(() => {
+    if (providerData.length > 0) {
+      // Get unique facility types from the data
+      const uniqueTypes = Array.from(new Set(providerData.map(item => item.facilityType)))
+        .filter(type => type) // Remove null/undefined
+        .sort(); // Sort alphabetically for stability
+
+      // Update the facility types state
+      setFacilityTypes(uniqueTypes);
+
+      // Create the mapping
+      const colorMap = uniqueTypes.reduce((acc, type, index) => {
+        acc[type] = facilityColorPalette[index % facilityColorPalette.length];
+        return acc;
+      }, {});
+
+      // Add 'Other' as fallback
+      colorMap['Other'] = '#6b7280';
+      
+      setFacilityColorMap(colorMap);
+    }
+  }, [providerData]);
+
+  const getFacilityColor = useCallback((facilityType) => {
+    return facilityColorMap[facilityType] || facilityColorMap['Other'];
+  }, [facilityColorMap]);
 
   const getServicesString = (services) => {
     const serviceTypes = ['inpatient', 'outpatient', 'children', 'adults'];
@@ -783,7 +906,11 @@ const ProviderLocationMapWithLegend = () => {
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
         <Box sx={{ display: 'flex', height: '600px' }}>
-          <MapContainer mapRef={mapContainer} />
+          <MapContainer 
+            mapRef={mapContainer}
+            facilityTypes={facilityTypes}
+            getFacilityColor={getFacilityColor}
+          />
           <Box sx={{ width: '25%', pl: 2 }}>
             <Tabs
               value={tabValue}
