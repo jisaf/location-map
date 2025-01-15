@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
-import { config } from './geographic-system-rules';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './styles/patterns';
 
@@ -16,6 +15,7 @@ import {
 } from '@mui/material';
 
 import MapContainer from './components/MapContainer';
+import { findCountyFromCoordinates, getServicesString, addCountyBoundaries } from './utils/mapUtils';
 
 const ProviderLocationMapWithLegend = () => {
   const [providerData, setProviderData] = useState([]);
@@ -330,11 +330,11 @@ const ProviderLocationMapWithLegend = () => {
   useEffect(() => {
     if (mapLoaded && countyBoundaries && providerData.length > 0 && facilityColorMap) {
       console.log('Map loaded and data ready, adding features');
-      addCountyBoundaries();
+      addCountyBoundariesCallback();
       addProviderMarkers(providerData);
       addServiceAreaCircles(providerData);
     }
-  }, [mapLoaded, countyBoundaries, providerData, facilityColorMap, addProviderMarkers, addCountyBoundaries, addServiceAreaCircles]);
+  }, [mapLoaded, countyBoundaries, providerData, facilityColorMap, addProviderMarkers, addCountyBoundariesCallback, addServiceAreaCircles]);
 
   const initMap = () => {
     if (map.current) return;
@@ -355,126 +355,9 @@ const ProviderLocationMapWithLegend = () => {
     }
   };
 
-  const addCountyBoundaries = useCallback(() => {
-    if (!map.current || !countyBoundaries) return;
-
-    if (!map.current.getSource('counties')) {
-      const regionLookup = config.counties.reduce((acc, county) => {
-        if (county && county.name) {
-          acc[county.name.toUpperCase()] = county.region;
-        }
-        return acc;
-      }, {});
-
-      const classificationLookup = config.counties.reduce((acc, county) => {
-        if (county && county.name) {
-          acc[county.name.toUpperCase()] = county.classification;
-        }
-        return acc;
-      }, {});
-
-      const updatedGeoJSON = {
-        ...countyBoundaries,
-        features: countyBoundaries.features.map(feature => ({
-          ...feature,
-          properties: {
-            ...feature.properties,
-            REGION: feature.properties?.COUNTY ? regionLookup[feature.properties.COUNTY] || 0 : 0,
-            CLASSIFICATION: feature.properties?.COUNTY ? classificationLookup[feature.properties.COUNTY] || 'Unknown' : 'Unknown'
-          }
-        }))
-      };
-
-      map.current.addSource('counties', {
-        type: 'geojson',
-        data: updatedGeoJSON
-      });
-
-      // Add base fill layer for region colors
-      map.current.addLayer({
-        'id': 'county-fills',
-        'type': 'fill',
-        'source': 'counties',
-        'paint': {
-          'fill-color': [
-            'match',
-            ['get', 'REGION'],
-            1, '#87CEEB',
-            2, '#90EE90',
-            3, '#FFA500',
-            4, '#FF6347',
-            '#ccc'
-          ],
-          'fill-opacity': 0.7
-        }
-      });
-
-      // Add pattern layer on top
-      map.current.addLayer({
-        'id': 'county-patterns',
-        'type': 'fill',
-        'source': 'counties',
-        'paint': {
-          'fill-pattern': [
-            'match',
-            ['get', 'CLASSIFICATION'],
-            'Large Metro', 'pattern-large-metro',
-            'Metro', 'pattern-metro',
-            'Micro', 'pattern-micro',
-            'Rural', 'pattern-rural',
-            'CEAC', 'pattern-ceac',
-            'pattern-rural' // default pattern
-          ]
-        }
-      });
-
-      map.current.addLayer({
-        'id': 'county-borders',
-        'type': 'line',
-        'source': 'counties',
-        'paint': {
-          'line-color': '#000',
-          'line-width': 1
-        }
-      });
-
-      map.current.addLayer({
-        'id': 'county-labels',
-        'type': 'symbol',
-        'source': 'counties',
-        'layout': {
-          'text-field': ['get', 'COUNTY'],
-          'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-          'text-size': 12,
-          'text-transform': 'uppercase',
-          'text-offset': [0, 0.6],
-          'text-anchor': 'top'
-        },
-        'paint': {
-          'text-color': '#333',
-          'text-halo-color': '#fff',
-          'text-halo-width': 2
-        }
-      });
-
-      map.current.on('click', 'county-fills', (e) => {
-        if (e.features?.length > 0) {
-          const feature = e.features[0];
-          const countyName = feature.properties?.COUNTY;
-          const countyData = countyName && config.counties.find(county => 
-            county?.name?.toUpperCase() === countyName
-          );
-          
-          new mapboxgl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <h3>${countyName || 'Unknown County'}</h3>
-              <p>Classification: ${countyData?.classification || 'N/A'}</p>
-              <p>BHASO Region: ${feature.properties?.REGION || 'N/A'}</p>
-            `)
-            .addTo(map.current);
-        }
-      });
+  const addCountyBoundariesCallback = useCallback(() => {
+    if (map.current && countyBoundaries) {
+      addCountyBoundaries(map.current, countyBoundaries);
     }
   }, [countyBoundaries]);
 
