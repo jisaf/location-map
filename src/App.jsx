@@ -23,6 +23,7 @@ const ProviderLocationMapWithLegend = () => {
   const [countyBoundaries, setCountyBoundaries] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tabValue, setTabValue] = useState(0);
+  const [facilityTypes, setFacilityTypes] = useState([]);
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef({});
@@ -116,17 +117,58 @@ const ProviderLocationMapWithLegend = () => {
     return county ? county.properties.COUNTY : null;
   };
 
-  const getFacilityColor = (facilityType) => {
-    const colorMap = {
-      'Hospital': '#ef4444',
-      'Community Clinic': '#22c55e',
-      'Mental Health Center': '#3b82f6',
-      'Crisis Center': '#f59e0b',
-      'Substance Use Disorder': '#8b5cf6',
-      'Other': '#6b7280'
-    };
-    return colorMap[facilityType] || colorMap['Other'];
-  };
+  // Stable color palette for facility types - using darker, more saturated colors
+  // to contrast with the lighter, pastel region colors
+  const facilityColorPalette = [
+    '#D32F2F', // Red
+    '#1976D2', // Blue
+    '#388E3C', // Green
+    '#7B1FA2', // Purple
+    '#F57C00', // Orange
+    '#0097A7', // Cyan
+    '#512DA8', // Deep Purple
+    '#C2185B', // Pink
+    '#FBC02D', // Yellow
+    '#455A64', // Blue Grey
+    '#2E7D32', // Dark Green
+    '#1565C0', // Dark Blue
+    '#6D4C41', // Brown
+    '#B71C1C', // Dark Red
+    '#004D40', // Dark Teal
+  ];
+
+  // Create a stable mapping of facility types to colors
+  const [facilityColorMap, setFacilityColorMap] = useState({});
+
+  useEffect(() => {
+    if (providerData.length > 0) {
+      console.log('Initializing facility colors with data:', providerData);
+      
+      // Get unique facility types from the data
+      const uniqueTypes = Array.from(new Set(providerData.map(item => item.facilityType)))
+        .filter(type => type) // Remove null/undefined
+        .sort(); // Sort alphabetically for stability
+
+      console.log('Unique facility types:', uniqueTypes);
+
+      // Create the mapping
+      const colorMap = uniqueTypes.reduce((acc, type, index) => {
+        acc[type] = facilityColorPalette[index % facilityColorPalette.length];
+        return acc;
+      }, {});
+
+      // Add 'Other' as fallback
+      colorMap['Other'] = '#6b7280';
+      
+      console.log('Created color map:', colorMap);
+      setFacilityColorMap(colorMap);
+      setFacilityTypes(uniqueTypes);
+    }
+  }, [providerData]);
+
+  const getFacilityColor = useCallback((facilityType) => {
+    return facilityColorMap[facilityType] || facilityColorMap['Other'];
+  }, [facilityColorMap]);
 
   const getServicesString = (services) => {
     const serviceTypes = ['inpatient', 'outpatient', 'children', 'adults'];
