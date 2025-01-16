@@ -651,8 +651,6 @@ const ProviderLocationMapWithLegend = () => {
     });
   }, [providerData, activeSpecialties]);
 
-  const [tabValue, setTabValue] = useState(0);
-
   return (
     <Card>
       <CardContent>
