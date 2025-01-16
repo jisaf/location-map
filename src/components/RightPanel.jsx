@@ -5,28 +5,35 @@ import Divider from '@mui/material/Divider';
 import { patterns } from '../patterns';
 
 const createPatternCanvas = (pattern, size = 20) => {
+  // First create a small canvas with the original pattern
+  const smallCanvas = document.createElement('canvas');
+  smallCanvas.width = pattern.width;
+  smallCanvas.height = pattern.height;
+  const smallCtx = smallCanvas.getContext('2d', { willReadFrequently: true });
+  
+  // Create the pattern data
+  const imageData = smallCtx.createImageData(pattern.width, pattern.height);
+  for (let i = 0; i < pattern.data.length; i += 4) {
+    // If any channel is white (255), make the pixel black
+    const isWhite = pattern.data[i] === 255;
+    imageData.data[i] = isWhite ? 0 : 255;     // R
+    imageData.data[i + 1] = isWhite ? 0 : 255; // G
+    imageData.data[i + 2] = isWhite ? 0 : 255; // B
+    imageData.data[i + 3] = isWhite ? 255 : 0; // A
+  }
+  smallCtx.putImageData(imageData, 0, 0);
+
+  // Create the final scaled canvas
   const canvas = document.createElement('canvas');
-  const scale = size / pattern.width;
-  canvas.width = pattern.width * scale;
-  canvas.height = pattern.height * scale;
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, size, size);
+  ctx.drawImage(smallCanvas, 0, 0, size, size);
   
-  // Scale up the pattern
-  const imageData = ctx.createImageData(pattern.width, pattern.height);
-  imageData.data.set(pattern.data);
-  
-  // Draw the original pattern
-  ctx.putImageData(imageData, 0, 0);
-  
-  // Scale it up
-  const scaledCanvas = document.createElement('canvas');
-  scaledCanvas.width = size;
-  scaledCanvas.height = size;
-  const scaledCtx = scaledCanvas.getContext('2d');
-  scaledCtx.imageSmoothingEnabled = false;
-  scaledCtx.drawImage(canvas, 0, 0, size, size);
-  
-  return scaledCanvas;
+  return canvas;
 };
 
 const PatternBox = ({ pattern, size = 20 }) => {
