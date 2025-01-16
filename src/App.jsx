@@ -5,16 +5,16 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import RightPanel from './components/RightPanel';
 // Using direct Google Sheets API instead of googleapis
 
-import { 
-  Card, 
-  CardContent, 
-  Typography, 
-  Box,
-  IconButton,
-  Drawer,
-  Tab,
-  Tabs
-} from '@mui/material';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Drawer from '@mui/material/Drawer';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
 import MenuIcon from '@mui/icons-material/Menu';
 
 const ProviderLocationMapWithLegend = () => {
