@@ -1,24 +1,28 @@
 .large-metro-pattern {
-  background-image: radial-gradient(circle at center, black 1.5px, transparent 1.5px);
-  background-size: 5px 5px;
+  background-image: 
+    linear-gradient(45deg, transparent 46%, black 46%, black 54%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, black 46%, black 54%, transparent 54%);
+  background-size: 8px 8px;
 }
 
 .metro-pattern {
-  background-image: radial-gradient(circle at center, black 1.5px, transparent 1.5px);
-  background-size: 7px 7px;
+  background-image: 
+    linear-gradient(45deg, transparent 46%, black 46%, black 54%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, black 46%, black 54%, transparent 54%);
+  background-size: 12px 12px;
 }
 
 .micro-pattern {
-  background-image: radial-gradient(circle at center, black 1px, transparent 1px);
-  background-size: 10px 10px;
+  background-image: linear-gradient(90deg, transparent 46%, black 46%, black 54%, transparent 54%);
+  background-size: 8px 20px;
 }
 
 .rural-pattern {
-  background-image: radial-gradient(circle at center, black 1px, transparent 1px);
-  background-size: 10px 20px;
+  background-image: linear-gradient(0deg, transparent 46%, black 46%, black 54%, transparent 54%);
+  background-size: 20px 8px;
 }
 
 .ceac-pattern {
-  background-image: linear-gradient(45deg, transparent 47%, black 47%, black 53%, transparent 53%);
-  background-size: 10px 10px;
+  background-image: linear-gradient(45deg, transparent 46%, black 46%, black 54%, transparent 54%);
+  background-size: 8px 8px;
 }
