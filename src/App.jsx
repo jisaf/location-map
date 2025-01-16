@@ -11,7 +11,9 @@ import {
   Typography, 
   Box,
   IconButton,
-  Drawer
+  Drawer,
+  Tab,
+  Tabs
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 
@@ -648,6 +650,8 @@ const ProviderLocationMapWithLegend = () => {
       return newState;
     });
   }, [providerData, activeSpecialties]);
+
+  const [tabValue, setTabValue] = useState(0);
 
   return (
     <Card>
