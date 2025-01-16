@@ -13,13 +13,7 @@ const createPatternCanvas = (pattern, size = 20) => {
   
   // Scale up the pattern
   const imageData = ctx.createImageData(pattern.width, pattern.height);
-  pattern.data.forEach((value, i) => {
-    const pixelIndex = i * 4;
-    imageData.data[pixelIndex] = 0;     // R
-    imageData.data[pixelIndex + 1] = 0; // G
-    imageData.data[pixelIndex + 2] = 0; // B
-    imageData.data[pixelIndex + 3] = value; // A
-  });
+  imageData.data.set(pattern.data);
   
   // Draw the original pattern
   ctx.putImageData(imageData, 0, 0);

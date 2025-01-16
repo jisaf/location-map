@@ -1,10 +1,17 @@
-// Creates an 8x8 pixel pattern
+// Creates an 8x8 pixel pattern with RGBA values
 const createPatternData = (pixelFunction) => {
-  return new Uint8Array(64).map((_, i) => {
+  const data = new Uint8Array(8 * 8 * 4);
+  for (let i = 0; i < 64; i++) {
     const x = i % 8;
     const y = Math.floor(i / 8);
-    return pixelFunction(x, y) ? 255 : 0;
-  });
+    const value = pixelFunction(x, y) ? 255 : 0;
+    const idx = i * 4;
+    data[idx] = value;     // R
+    data[idx + 1] = value; // G
+    data[idx + 2] = value; // B
+    data[idx + 3] = value; // A
+  }
+  return data;
 };
 
 export const patterns = {
