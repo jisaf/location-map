@@ -1,11 +1,63 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
 import Divider from '@mui/material/Divider';
+import { patterns } from '../patterns';
+
+const createPatternCanvas = (pattern, size = 20) => {
+  const canvas = document.createElement('canvas');
+  const scale = size / pattern.width;
+  canvas.width = pattern.width * scale;
+  canvas.height = pattern.height * scale;
+  const ctx = canvas.getContext('2d');
+  
+  // Scale up the pattern
+  const imageData = ctx.createImageData(pattern.width, pattern.height);
+  pattern.data.forEach((value, i) => {
+    const pixelIndex = i * 4;
+    imageData.data[pixelIndex] = 0;     // R
+    imageData.data[pixelIndex + 1] = 0; // G
+    imageData.data[pixelIndex + 2] = 0; // B
+    imageData.data[pixelIndex + 3] = value; // A
+  });
+  
+  // Draw the original pattern
+  ctx.putImageData(imageData, 0, 0);
+  
+  // Scale it up
+  const scaledCanvas = document.createElement('canvas');
+  scaledCanvas.width = size;
+  scaledCanvas.height = size;
+  const scaledCtx = scaledCanvas.getContext('2d');
+  scaledCtx.imageSmoothingEnabled = false;
+  scaledCtx.drawImage(canvas, 0, 0, size, size);
+  
+  return scaledCanvas;
+};
+
+const PatternBox = ({ pattern, size = 20 }) => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      const patternCanvas = createPatternCanvas(pattern, size);
+      const ctx = canvasRef.current.getContext('2d');
+      ctx.drawImage(patternCanvas, 0, 0);
+    }
+  }, [pattern, size]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={size}
+      height={size}
+      style={{
+        border: '1px solid black',
+        marginRight: '8px',
+        backgroundColor: 'white'
+      }}
+    />
+  );};
 
 const RightPanel = ({
   facilityTypes,
@@ -62,23 +114,14 @@ const RightPanel = ({
           County Classifications
         </Typography>
         {[
-          { name: 'Large Metro', pattern: 'large-metro-pattern' },
-          { name: 'Metro', pattern: 'metro-pattern' },
-          { name: 'Micro', pattern: 'micro-pattern' },
-          { name: 'Rural', pattern: 'rural-pattern' },
-          { name: 'CEAC', pattern: 'ceac-pattern' }
+          { name: 'Large Metro', pattern: 'large-metro' },
+          { name: 'Metro', pattern: 'metro' },
+          { name: 'Micro', pattern: 'micro' },
+          { name: 'Rural', pattern: 'rural' },
+          { name: 'CEAC', pattern: 'ceac' }
         ].map(({ name, pattern }) => (
           <Box key={name} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Box
-              className={pattern}
-              sx={{
-                width: 20,
-                height: 20,
-                border: '1px solid #000',
-                mr: 1,
-                backgroundColor: 'white'
-              }}
-            />
+            <PatternBox pattern={patterns[pattern]} size={20} />
             <Typography variant="body2">{name}</Typography>
           </Box>
         ))}

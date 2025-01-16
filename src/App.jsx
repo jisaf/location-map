@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
 import { config } from './geographic-system-rules';
+import { patterns } from './patterns';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import './styles/patterns.css';
 import RightPanel from './components/RightPanel';
 // Using direct Google Sheets API instead of googleapis
 
@@ -298,58 +298,8 @@ const ProviderLocationMapWithLegend = () => {
       };
 
       // Add patterns
-      map.current.addImage('pattern-large-metro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Dense crosshatch (diagonal lines + horizontal line)
-          return (x === y || x === (7 - y) || y === 4) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-metro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Crosshatch (diagonal lines)
-          return (x === y || x === (7 - y)) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-micro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Grid (vertical and horizontal lines)
-          return (x % 4 === 0 || y % 4 === 0) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-rural', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const y = Math.floor(i / 8);
-          // Single horizontal line
-          return y === 4 ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-ceac', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Single diagonal line
-          return x === y ? 255 : 0;
-        })
+      Object.entries(patterns).forEach(([name, pattern]) => {
+        map.current.addImage(`pattern-${name}`, pattern);
       });
 
       map.current.addSource('counties', {
