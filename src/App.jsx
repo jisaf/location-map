@@ -625,54 +625,100 @@ const ProviderLocationMapWithLegend = () => {
         <Typography variant="h6" gutterBottom>
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
-        <Box sx={{ position: 'relative', height: '600px' }}>
-          <Box
-            ref={mapContainer}
-            sx={{ 
-              width: '100%', 
-              height: '100%',
-              border: 1, 
-              borderColor: 'grey.300',
-              borderRadius: 1,
-              overflow: 'hidden'
-            }}
-          />
-          <IconButton
-            sx={{
-              position: 'absolute',
-              top: 10,
-              left: 10,
-              backgroundColor: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              },
-              boxShadow: 1
-            }}
-            onClick={() => setDrawerOpen(true)}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Drawer
-            anchor="left"
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            PaperProps={{
-              sx: { width: 300 }
-            }}
-          >
-            <RightPanel
-              tabValue={tabValue}
-              setTabValue={setTabValue}
-              facilityTypes={facilityTypes}
-              getFacilityColor={getFacilityColor}
-              activeSpecialties={activeSpecialties}
-              toggleSpecialty={toggleSpecialty}
-              activeServiceTypes={activeServiceTypes}
-              toggleServiceType={toggleServiceType}
-              activeRegions={activeRegions}
-              toggleRegion={toggleRegion}
+        <Box sx={{ display: 'flex', height: '600px' }}>
+          <Box sx={{ position: 'relative', flex: 1 }}>
+            <Box
+              ref={mapContainer}
+              sx={{ 
+                width: '100%', 
+                height: '100%',
+                border: 1, 
+                borderColor: 'grey.300',
+                borderRadius: 1,
+                overflow: 'hidden'
+              }}
             />
-          </Drawer>
+            <IconButton
+              sx={{
+                position: 'absolute',
+                top: 10,
+                left: 10,
+                backgroundColor: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                },
+                boxShadow: 1
+              }}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Drawer
+              anchor="left"
+              open={drawerOpen}
+              onClose={() => setDrawerOpen(false)}
+              PaperProps={{
+                sx: { width: 300 }
+              }}
+            >
+              <RightPanel
+                facilityTypes={facilityTypes}
+                getFacilityColor={getFacilityColor}
+              />
+            </Drawer>
+          </Box>
+          <Box sx={{ width: '300px', pl: 2, overflowY: 'auto' }}>
+            <Tabs
+              value={tabValue}
+              onChange={(e, newValue) => setTabValue(newValue)}
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+              <Tab label="Facilities" />
+              <Tab label="Services" />
+            </Tabs>
+            <Box sx={{ mt: 2 }}>
+              {tabValue === 0 && (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Facility Types
+                  </Typography>
+                  {facilityTypes.map((type) => (
+                    <FormControlLabel
+                      key={type}
+                      control={
+                        <Checkbox
+                          checked={activeSpecialties[type]}
+                          onChange={() => toggleSpecialty(type)}
+                          size="small"
+                        />
+                      }
+                      label={type}
+                    />
+                  ))}
+                </Box>
+              )}
+              {tabValue === 1 && (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Service Types
+                  </Typography>
+                  {Object.entries(activeServiceTypes).map(([type, isActive]) => (
+                    <FormControlLabel
+                      key={type}
+                      control={
+                        <Checkbox
+                          checked={isActive}
+                          onChange={() => toggleServiceType(type)}
+                          size="small"
+                        />
+                      }
+                      label={type}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Box>
         </Box>
       </CardContent>
     </Card>
