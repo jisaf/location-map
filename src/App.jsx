@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
 import { config } from './geographic-system-rules';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import './styles/patterns.css';
 import RightPanel from './components/RightPanel';
 // Using direct Google Sheets API instead of googleapis
 
@@ -683,17 +684,29 @@ const ProviderLocationMapWithLegend = () => {
                     Facility Types
                   </Typography>
                   {facilityTypes.map((type) => (
-                    <FormControlLabel
-                      key={type}
-                      control={
-                        <Checkbox
-                          checked={activeSpecialties[type]}
-                          onChange={() => toggleSpecialty(type)}
-                          size="small"
-                        />
-                      }
-                      label={type}
-                    />
+                    <Box key={type} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: getFacilityColor(type),
+                          border: '1px solid rgba(0, 0, 0, 0.3)',
+                          mr: 1
+                        }}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={activeSpecialties[type]}
+                            onChange={() => toggleSpecialty(type)}
+                            size="small"
+                          />
+                        }
+                        label={type}
+                        sx={{ flex: 1 }}
+                      />
+                    </Box>
                   ))}
                 </Box>
               )}
@@ -703,17 +716,29 @@ const ProviderLocationMapWithLegend = () => {
                     Service Types
                   </Typography>
                   {Object.entries(activeServiceTypes).map(([type, isActive]) => (
-                    <FormControlLabel
-                      key={type}
-                      control={
-                        <Checkbox
-                          checked={isActive}
-                          onChange={() => toggleServiceType(type)}
-                          size="small"
-                        />
-                      }
-                      label={type}
-                    />
+                    <Box key={type} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: 'primary.main',
+                          opacity: isActive ? 1 : 0.3,
+                          mr: 1
+                        }}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={isActive}
+                            onChange={() => toggleServiceType(type)}
+                            size="small"
+                          />
+                        }
+                        label={type}
+                        sx={{ flex: 1 }}
+                      />
+                    </Box>
                   ))}
                 </Box>
               )}

@@ -75,7 +75,8 @@ const RightPanel = ({
                 width: 10,
                 height: 10,
                 border: '1px solid #000',
-                mr: 1
+                mr: 1,
+                backgroundColor: 'white'
               }}
             />
             <Typography variant="body2">{name}</Typography>
