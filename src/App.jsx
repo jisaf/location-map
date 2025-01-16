@@ -2,18 +2,18 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
 import { config } from './geographic-system-rules';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import RightPanel from './components/RightPanel';
 // Using direct Google Sheets API instead of googleapis
 
 import { 
   Card, 
   CardContent, 
   Typography, 
-  Tabs, 
-  Tab, 
   Box,
-  Checkbox,
-  FormControlLabel
+  IconButton,
+  Drawer
 } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 
 const ProviderLocationMapWithLegend = () => {
   const [providerData, setProviderData] = useState([]);
@@ -167,6 +167,7 @@ const ProviderLocationMapWithLegend = () => {
   }, [providerData]);
 
   const getFacilityColor = useCallback((facilityType) => {
+    console.log(facilityType)
     return facilityColorMap[facilityType] || facilityColorMap['Other'];
   }, [facilityColorMap]);
 
@@ -636,100 +637,60 @@ const ProviderLocationMapWithLegend = () => {
     });
   }, [providerData, activeSpecialties]);
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
-        <Box sx={{ display: 'flex', height: '600px' }}>
+        <Box sx={{ position: 'relative', height: '600px' }}>
           <Box
             ref={mapContainer}
             sx={{ 
-              width: '75%', 
+              width: '100%', 
+              height: '100%',
               border: 1, 
               borderColor: 'grey.300',
               borderRadius: 1,
               overflow: 'hidden'
             }}
           />
-          <Box sx={{ width: '25%', pl: 2 }}>
-            <Tabs
-              value={tabValue}
-              onChange={(e, newValue) => setTabValue(newValue)}
-              sx={{ borderBottom: 1, borderColor: 'divider' }}
-            >
-              <Tab label="Facilities" />
-              <Tab label="Services" />
-            </Tabs>
-            
-            <Box sx={{ mt: 2 }}>
-              {tabValue === 0 && (
-                <Box>
-                  {Object.entries(activeSpecialties).map(([specialty, isActive]) => (
-                    <Box key={specialty} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={isActive}
-                            onChange={() => toggleSpecialty(specialty)}
-                            size="small"
-                          />
-                        }
-                        label={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                mr: 1,
-                                bgcolor: getFacilityColor(specialty)
-                              }}
-                            />
-                            <Typography variant="body2">{specialty}</Typography>
-                          </Box>
-                        }
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              )}
-              
-              {tabValue === 1 && (
-                <Box>
-                  {Object.entries(activeServiceTypes).map(([type, isActive]) => (
-                    <Box key={type} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={isActive}
-                            onChange={() => toggleServiceType(type)}
-                            size="small"
-                          />
-                        }
-                        label={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                mr: 1,
-                                bgcolor: 'primary.main',
-                                opacity: 0.2
-                              }}
-                            />
-                            <Typography variant="body2">{type}</Typography>
-                          </Box>
-                        }
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              )}
+          <IconButton
+            sx={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              },
+            }}
+            onClick={() => setDrawerOpen(true)}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Drawer
+            anchor="left"
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+          >
+            <Box sx={{ width: 300 }}>
+              <RightPanel
+                tabValue={tabValue}
+                setTabValue={setTabValue}
+                facilityTypes={facilityTypes}
+                getFacilityColor={getFacilityColor}
+                activeSpecialties={activeSpecialties}
+                toggleSpecialty={toggleSpecialty}
+                activeServiceTypes={activeServiceTypes}
+                toggleServiceType={toggleServiceType}
+                activeRegions={activeRegions}
+                toggleRegion={toggleRegion}
+              />
             </Box>
-          </Box>
+          </Drawer>
         </Box>
       </CardContent>
     </Card>
