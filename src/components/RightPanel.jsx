@@ -72,8 +72,8 @@ const RightPanel = ({
             <Box
               className={pattern}
               sx={{
-                width: 10,
-                height: 10,
+                width: 20,
+                height: 20,
                 border: '1px solid #000',
                 mr: 1,
                 backgroundColor: 'white'
