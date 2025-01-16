@@ -19,7 +19,12 @@ const ProviderLocationMapWithLegend = () => {
   const [providerData, setProviderData] = useState([]);
   const [activeSpecialties, setActiveSpecialties] = useState({});
   const [activeServiceTypes, setActiveServiceTypes] = useState({});
-  const [activeRegions, setActiveRegions] = useState({});
+  const [activeRegions, setActiveRegions] = useState({
+    1: true,
+    2: true,
+    3: true,
+    4: true
+  });
   const [countyBoundaries, setCountyBoundaries] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tabValue, setTabValue] = useState(0);
@@ -167,7 +172,7 @@ const ProviderLocationMapWithLegend = () => {
   }, [providerData]);
 
   const getFacilityColor = useCallback((facilityType) => {
-    console.log(facilityType)
+    console.log(1, facilityType, facilityColorMap)
     return facilityColorMap[facilityType] || facilityColorMap['Other'];
   }, [facilityColorMap]);
 
@@ -598,6 +603,13 @@ const ProviderLocationMapWithLegend = () => {
     });
   }, []);
 
+  const toggleRegion = useCallback((region) => {
+    setActiveRegions(prev => {
+      const newState = { ...prev, [region]: !prev[region] };
+      return newState;
+    });
+  }, []);
+
   const toggleServiceType = useCallback((serviceType) => {
     setActiveServiceTypes(prev => {
       const newState = { ...prev, [serviceType]: !prev[serviceType] };
@@ -637,60 +649,100 @@ const ProviderLocationMapWithLegend = () => {
     });
   }, [providerData, activeSpecialties]);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
   return (
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
-        <Box sx={{ position: 'relative', height: '600px' }}>
+        <Box sx={{ display: 'flex', height: '600px' }}>
           <Box
             ref={mapContainer}
             sx={{ 
-              width: '100%', 
-              height: '100%',
+              width: '75%', 
               border: 1, 
               borderColor: 'grey.300',
               borderRadius: 1,
               overflow: 'hidden'
             }}
           />
-          <IconButton
-            sx={{
-              position: 'absolute',
-              top: 10,
-              left: 10,
-              backgroundColor: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              },
-            }}
-            onClick={() => setDrawerOpen(true)}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Drawer
-            anchor="left"
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-          >
-            <Box sx={{ width: 300 }}>
-              <RightPanel
-                tabValue={tabValue}
-                setTabValue={setTabValue}
-                facilityTypes={facilityTypes}
-                getFacilityColor={getFacilityColor}
-                activeSpecialties={activeSpecialties}
-                toggleSpecialty={toggleSpecialty}
-                activeServiceTypes={activeServiceTypes}
-                toggleServiceType={toggleServiceType}
-                activeRegions={activeRegions}
-                toggleRegion={toggleRegion}
-              />
+          <Box sx={{ width: '25%', pl: 2 }}>
+            <Tabs
+              value={tabValue}
+              onChange={(e, newValue) => setTabValue(newValue)}
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+              <Tab label="Facilities" />
+              <Tab label="Services" />
+            </Tabs>
+            
+            <Box sx={{ mt: 2 }}>
+              {tabValue === 0 && (
+                <Box>
+                  {Object.entries(activeSpecialties).map(([specialty, isActive]) => (
+                    <Box key={specialty} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={isActive}
+                            onChange={() => toggleSpecialty(specialty)}
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                mr: 1,
+                                bgcolor: getFacilityColor(specialty)
+                              }}
+                            />
+                            <Typography variant="body2">{specialty}</Typography>
+                          </Box>
+                        }
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              )}
+              
+              {tabValue === 1 && (
+                <Box>
+                  {Object.entries(activeServiceTypes).map(([type, isActive]) => (
+                    <Box key={type} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={isActive}
+                            onChange={() => toggleServiceType(type)}
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                mr: 1,
+                                bgcolor: 'primary.main',
+                                opacity: 0.2
+                              }}
+                            />
+                            <Typography variant="body2">{type}</Typography>
+                          </Box>
+                        }
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              )}
             </Box>
-          </Drawer>
+          </Box>
         </Box>
       </CardContent>
     </Card>
