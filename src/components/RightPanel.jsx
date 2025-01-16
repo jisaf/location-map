@@ -1,13 +1,11 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Tabs,
-  Tab,
-  FormControlLabel,
-  Checkbox,
-  Divider
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Divider from '@mui/material/Divider';
 
 const RightPanel = ({
   tabValue,
