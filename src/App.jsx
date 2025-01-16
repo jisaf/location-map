@@ -144,39 +144,32 @@ const ProviderLocationMapWithLegend = () => {
     '#004D40', // Dark Teal
   ];
 
-  // Create a stable mapping of facility types to colors
-  const [facilityColorMap, setFacilityColorMap] = useState({});
-
   useEffect(() => {
     if (providerData.length > 0) {
-      console.log('Initializing facility colors with data:', providerData);
-      
       // Get unique facility types from the data
       const uniqueTypes = Array.from(new Set(providerData.map(item => item.facilityType)))
         .filter(type => type) // Remove null/undefined
         .sort(); // Sort alphabetically for stability
-
-      console.log('Unique facility types:', uniqueTypes);
-
-      // Create the mapping
-      const colorMap = uniqueTypes.reduce((acc, type, index) => {
-        acc[type] = facilityColorPalette[index % facilityColorPalette.length];
-        return acc;
-      }, {});
-
-      // Add 'Other' as fallback
-      colorMap['Other'] = '#6b7280';
       
-      console.log('Created color map:', colorMap);
-      setFacilityColorMap(colorMap);
       setFacilityTypes(uniqueTypes);
     }
   }, [providerData]);
 
   const getFacilityColor = useCallback((facilityType) => {
-    console.log(1, facilityType, facilityColorMap)
-    return facilityColorMap[facilityType] || facilityColorMap['Other'];
-  }, [facilityColorMap]);
+    if (!facilityType) return '#6b7280'; // Default color for undefined/null
+
+    // Get unique facility types and create color mapping on demand
+    const uniqueTypes = Array.from(new Set(providerData.map(item => item.facilityType)))
+      .filter(type => type)
+      .sort();
+
+    const typeIndex = uniqueTypes.indexOf(facilityType);
+    if (typeIndex !== -1) {
+      return facilityColorPalette[typeIndex % facilityColorPalette.length];
+    }
+
+    return '#6b7280'; // Default color for unknown types
+  }, [providerData]);
 
   const getServicesString = (services) => {
     const serviceTypes = ['inpatient', 'outpatient', 'children', 'adults'];
