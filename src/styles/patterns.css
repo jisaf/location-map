@@ -1,49 +1,24 @@
-/* Create an 8x8 pixel pattern and scale it up */
-.pattern-base {
-  image-rendering: pixelated;
-  background-repeat: repeat;
-  background-size: 20px 20px; /* Scale up from 8px */
-}
-
 .large-metro-pattern {
-  position: relative;
-  background-color: transparent;
-  background-image: linear-gradient(45deg, transparent 35%, black 35%, black 65%, transparent 65%),
-                    linear-gradient(-45deg, transparent 35%, black 35%, black 65%, transparent 65%);
-  background-size: 20px 20px;
-}
-.large-metro-pattern::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: black;
-  transform: translateY(-50%);
+  background-image: radial-gradient(circle at center, black 1.5px, transparent 1.5px);
+  background-size: 5px 5px;
 }
 
 .metro-pattern {
-  background-color: transparent;
-  background-image: linear-gradient(45deg, transparent 35%, black 35%, black 65%, transparent 65%),
-                    linear-gradient(-45deg, transparent 35%, black 35%, black 65%, transparent 65%);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle at center, black 1.5px, transparent 1.5px);
+  background-size: 7px 7px;
 }
 
 .micro-pattern {
-  background-color: transparent;
-  background-image: linear-gradient(0deg, transparent 45%, black 45%, black 55%, transparent 55%);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle at center, black 1px, transparent 1px);
+  background-size: 10px 10px;
 }
 
 .rural-pattern {
-  background-color: transparent;
-  background-image: linear-gradient(0deg, transparent 45%, black 45%, black 55%, transparent 55%);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle at center, black 1px, transparent 1px);
+  background-size: 10px 20px;
 }
 
 .ceac-pattern {
-  background-color: transparent;
-  background-image: linear-gradient(45deg, transparent 35%, black 35%, black 65%, transparent 65%);
-  background-size: 20px 20px;
+  background-image: linear-gradient(45deg, transparent 47%, black 47%, black 53%, transparent 53%);
+  background-size: 10px 10px;
 }
