@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from './mapbox';
 import { config } from './geographic-system-rules';
+import { patterns } from './patterns';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import RightPanel from './components/RightPanel';
 // Using direct Google Sheets API instead of googleapis
@@ -31,6 +32,7 @@ const ProviderLocationMapWithLegend = () => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [facilityTypes, setFacilityTypes] = useState([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef({});
@@ -53,12 +55,9 @@ const ProviderLocationMapWithLegend = () => {
       if (!jsonText) {
         throw new Error('Invalid response format');
       }
-      console.log(jsonText)
       const jsonData = JSON.parse(jsonText);
-      console.log('Parsed JSON data:', jsonData);
       const table = jsonData.table;
       const headers = table.cols.map(col => col.label.trim());
-      console.log('Headers:', headers);
       
       const data = table.rows
         .map(row => {
@@ -76,7 +75,6 @@ const ProviderLocationMapWithLegend = () => {
         })
         .filter(item => item.FacilityName !== null); // Drop rows with null Facility Name
       
-      console.log('Processed data:', data);
       return data;
     } catch (error) {
       console.error('Error fetching data from Google Sheets:', error);
@@ -188,21 +186,17 @@ const ProviderLocationMapWithLegend = () => {
     }
 
     return data.map(item => {
-      console.log(item)
       // Coordinates should already be numbers from fetchData
       const longitude = item['Longitude(optional)'];
       const latitude = item['Latitude(optional)'];
-      console.log('Using coordinates:', { longitude, latitude });
       
       // Get county from coordinates if available
       let county = '';
       if (longitude && latitude && countyBoundaries) {
         county = findCountyFromCoordinates(longitude, latitude, countyBoundaries);
         if (county) {
-          console.log(`Found county from coordinates for ${item['FacilityName']}: ${county}`);
         }
       }
-      console.log('Processing item:', item);
       return {
         facilityName: item['FacilityName'],
         facilityType: item['FacilityType'],
@@ -233,9 +227,7 @@ const ProviderLocationMapWithLegend = () => {
 
         // Get provider data
         const data = await fetchData();
-        console.log('Raw data from fetchData:', data);
         const enrichedData = flattenData(data);
-        console.log('Enriched data:', enrichedData);
         
         setProviderData(enrichedData);
         initMap();
@@ -257,11 +249,9 @@ const ProviderLocationMapWithLegend = () => {
   }, [mapLoaded, countyBoundaries, providerData]);
 
   const initMap = () => {
-    console.log('Initializing map, current map ref:', map.current);
     if (map.current) return;
 
     try {
-      console.log('Creating new map instance');
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v10',
@@ -270,7 +260,6 @@ const ProviderLocationMapWithLegend = () => {
       });
 
       map.current.on('load', () => {
-        console.log('Map loaded successfully');
         setMapLoaded(true);
       });
     } catch (error) {
@@ -309,58 +298,8 @@ const ProviderLocationMapWithLegend = () => {
       };
 
       // Add patterns
-      map.current.addImage('pattern-large-metro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Dense crosshatch (diagonal lines + horizontal line)
-          return (x === y || x === (7 - y) || y === 4) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-metro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Crosshatch (diagonal lines)
-          return (x === y || x === (7 - y)) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-micro', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Grid (vertical and horizontal lines)
-          return (x % 4 === 0 || y % 4 === 0) ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-rural', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const y = Math.floor(i / 8);
-          // Single horizontal line
-          return y === 4 ? 255 : 0;
-        })
-      });
-
-      map.current.addImage('pattern-ceac', {
-        width: 8,
-        height: 8,
-        data: new Uint8Array(256).map((_, i) => {
-          const x = i % 8;
-          const y = Math.floor(i / 8);
-          // Single diagonal line
-          return x === y ? 255 : 0;
-        })
+      Object.entries(patterns).forEach(([name, pattern]) => {
+        map.current.addImage(`pattern-${name}`, pattern);
       });
 
       map.current.addSource('counties', {
@@ -457,20 +396,15 @@ const ProviderLocationMapWithLegend = () => {
   };
 
   const addProviderMarkers = useCallback((facilities) => {
-    console.log('Adding provider markers with facilities:', facilities);
-    console.log('Map reference:', map.current);
     if (!map.current || !facilities) return;
 
-    console.log('Clearing existing markers');
     Object.values(markers.current).forEach(markerArray => {
       markerArray.forEach(marker => marker.remove());
     });
     markers.current = {};
 
     facilities.forEach((facility) => {
-      console.log('Processing facility for marker:', facility);
       if (facility.longitude && facility.latitude) {
-        console.log('Creating marker for facility:', facility.facilityName);
         const el = document.createElement('div');
         el.className = 'marker';
         el.style.backgroundColor = getFacilityColor(facility.facilityType);
@@ -489,19 +423,14 @@ const ProviderLocationMapWithLegend = () => {
             `)
           );
 
-        console.log('Marker created:', marker);
         if (!markers.current[facility.facilityType]) {
           markers.current[facility.facilityType] = [];
         }
         
         markers.current[facility.facilityType].push(marker);
 
-        console.log('Active specialties:', activeSpecialties);
-        console.log('Facility type:', facility.facilityType);
-        console.log('Should show marker:', activeSpecialties[facility.facilityType]);
         
         if (activeSpecialties[facility.facilityType]) {
-          console.log('Adding marker to map');
           marker.addTo(map.current);
         }
       }
@@ -559,12 +488,9 @@ const ProviderLocationMapWithLegend = () => {
   }, [activeServiceTypes]);
 
   const initLegend = (data) => {
-    console.log('Initializing legend with data:', data);
     const uniqueFacilityTypes = Array.from(new Set(data.map(item => item.facilityType).filter(Boolean)));
-    console.log('Unique facility types:', uniqueFacilityTypes);
     
     const specialties = uniqueFacilityTypes.reduce((acc, type) => ({ ...acc, [type]: true }), {});
-    console.log('Setting active specialties:', specialties);
     setActiveSpecialties(specialties);
 
     // Initialize service types based on available services - all checked by default
@@ -651,17 +577,48 @@ const ProviderLocationMapWithLegend = () => {
           Provider Location Map - Proof of Concept. NOT INTENDED FOR ANALYSIS.
         </Typography>
         <Box sx={{ display: 'flex', height: '600px' }}>
-          <Box
-            ref={mapContainer}
-            sx={{ 
-              width: '75%', 
-              border: 1, 
-              borderColor: 'grey.300',
-              borderRadius: 1,
-              overflow: 'hidden'
-            }}
-          />
-          <Box sx={{ width: '25%', pl: 2 }}>
+          <Box sx={{ position: 'relative', flex: 1 }}>
+            <Box
+              ref={mapContainer}
+              sx={{ 
+                width: '100%', 
+                height: '100%',
+                border: 1, 
+                borderColor: 'grey.300',
+                borderRadius: 1,
+                overflow: 'hidden'
+              }}
+            />
+            <IconButton
+              sx={{
+                position: 'absolute',
+                top: 10,
+                left: 10,
+                backgroundColor: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                },
+                boxShadow: 1
+              }}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Drawer
+              anchor="left"
+              open={drawerOpen}
+              onClose={() => setDrawerOpen(false)}
+              PaperProps={{
+                sx: { width: 300 }
+              }}
+            >
+              <RightPanel
+                facilityTypes={facilityTypes}
+                getFacilityColor={getFacilityColor}
+              />
+            </Drawer>
+          </Box>
+          <Box sx={{ width: '300px', pl: 2, overflowY: 'auto' }}>
             <Tabs
               value={tabValue}
               onChange={(e, newValue) => setTabValue(newValue)}
@@ -670,44 +627,56 @@ const ProviderLocationMapWithLegend = () => {
               <Tab label="Facilities" />
               <Tab label="Services" />
             </Tabs>
-            
             <Box sx={{ mt: 2 }}>
               {tabValue === 0 && (
                 <Box>
-                  {Object.entries(activeSpecialties).map(([specialty, isActive]) => (
-                    <Box key={specialty} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Facility Types
+                  </Typography>
+                  {facilityTypes.map((type) => (
+                    <Box key={type} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: getFacilityColor(type),
+                          border: '1px solid rgba(0, 0, 0, 0.3)',
+                          mr: 1
+                        }}
+                      />
                       <FormControlLabel
                         control={
                           <Checkbox
-                            checked={isActive}
-                            onChange={() => toggleSpecialty(specialty)}
+                            checked={activeSpecialties[type]}
+                            onChange={() => toggleSpecialty(type)}
                             size="small"
                           />
                         }
-                        label={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                mr: 1,
-                                bgcolor: getFacilityColor(specialty)
-                              }}
-                            />
-                            <Typography variant="body2">{specialty}</Typography>
-                          </Box>
-                        }
+                        label={type}
+                        sx={{ flex: 1 }}
                       />
                     </Box>
                   ))}
                 </Box>
               )}
-              
               {tabValue === 1 && (
                 <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Service Types
+                  </Typography>
                   {Object.entries(activeServiceTypes).map(([type, isActive]) => (
                     <Box key={type} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: 'primary.main',
+                          opacity: isActive ? 1 : 0.3,
+                          mr: 1
+                        }}
+                      />
                       <FormControlLabel
                         control={
                           <Checkbox
@@ -716,21 +685,8 @@ const ProviderLocationMapWithLegend = () => {
                             size="small"
                           />
                         }
-                        label={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                mr: 1,
-                                bgcolor: 'primary.main',
-                                opacity: 0.2
-                              }}
-                            />
-                            <Typography variant="body2">{type}</Typography>
-                          </Box>
-                        }
+                        label={type}
+                        sx={{ flex: 1 }}
                       />
                     </Box>
                   ))}
